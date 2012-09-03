@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.GamerServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
+using TileEngine;
 
 namespace CowMouse
 {
@@ -18,6 +19,8 @@ namespace CowMouse
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
+
+        WorldManager worldManager;
 
         public Game1()
         {
@@ -33,7 +36,11 @@ namespace CowMouse
         /// </summary>
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
+            worldManager = new WorldManager(this, new TileMap());
+            worldManager.Enabled = true;
+            worldManager.Visible = true;
+
+            Components.Add(worldManager);
 
             base.Initialize();
         }
@@ -47,7 +54,9 @@ namespace CowMouse
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // TODO: use this.Content to load your game content here
+            worldManager.SetViewDimensions(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight);
+
+            this.IsMouseVisible = true;
         }
 
         /// <summary>
