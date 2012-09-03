@@ -15,14 +15,14 @@ namespace CowMouse
     /// <summary>
     /// This is the main type for your game
     /// </summary>
-    public class Game1 : Microsoft.Xna.Framework.Game
+    public class CowMouseGame : Microsoft.Xna.Framework.Game
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
 
         WorldManager worldManager;
 
-        public Game1()
+        public CowMouseGame()
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
@@ -36,7 +36,7 @@ namespace CowMouse
         /// </summary>
         protected override void Initialize()
         {
-            worldManager = new WorldManager(this, new TileMap());
+            worldManager = new WorldManager(this);
             worldManager.Enabled = true;
             worldManager.Visible = true;
 

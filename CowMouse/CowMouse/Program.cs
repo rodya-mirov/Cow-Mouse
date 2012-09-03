@@ -10,7 +10,7 @@ namespace CowMouse
         /// </summary>
         static void Main(string[] args)
         {
-            using (Game1 game = new Game1())
+            using (CowMouseGame game = new CowMouseGame())
             {
                 game.Run();
             }
