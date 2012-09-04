@@ -21,12 +21,17 @@ namespace CowMouse
         private HUD HUD { get; set; }
 
         private MapCell defaultHighlightCell { get; set; }
+        private MapCell defaultInvalidCell { get; set; }
+
+        private SortedSet<Building> buildings;
 
         public WorldManager(Game game)
             : base(game, TileSheetPath)
         {
             Resources = new ResourceTracker();
             HUD = new HUD(this);
+
+            buildings = new SortedSet<Building>();
         }
 
         protected override void LoadContent()
@@ -42,6 +47,7 @@ namespace CowMouse
 
             Resources.GetIncome(ResourceType.WOOD, 500);
             defaultHighlightCell = new MapCell(2, 0, 0);
+            defaultInvalidCell = new MapCell(3, 0, 0);
         }
 
         public override void Draw(GameTime gameTime)
@@ -124,20 +130,26 @@ namespace CowMouse
             int ymin = Math.Min(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
             int ymax = Math.Max(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
 
-            //this is replacable code, just a stand-in!
-            //if we can afford it, buy a bunch of wood flooring
-            int cost = 5 * (xmax - xmin + 1) * (ymax - ymin + 1);
-            if (Resources.SafeSpend(ResourceType.WOOD, cost))
+            if (isValidSelection(xmin, xmax, ymin, ymax))
             {
-                MapCell floorCell = new MapCell(70, 0, 0);
-
-                for (int x = xmin; x <= xmax; x++)
+                //this is replacable code, just a stand-in!
+                //if we can afford it, buy a bunch of wood flooring
+                int cost = 5 * (xmax - xmin + 1) * (ymax - ymin + 1);
+                if (Resources.SafeSpend(ResourceType.WOOD, cost))
                 {
-                    for (int y = ymin; y <= ymax; y++)
+                    MapCell floorCell = new MapCell(70, 0, 0);
+
+                    for (int x = xmin; x <= xmax; x++)
                     {
-                        MyMap.AddConstructedCell(floorCell, x, y);
+                        for (int y = ymin; y <= ymax; y++)
+                        {
+                            MyMap.AddConstructedCell(floorCell, x, y);
+                        }
                     }
                 }
+
+                Building building = new Building(xmin, xmax, ymin, ymax);
+                buildings.Add(building);
             }
         }
 
@@ -153,13 +165,35 @@ namespace CowMouse
             int ymin = Math.Min(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
             int ymax = Math.Max(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
 
+            MapCell cell;
+
+            if (isValidSelection(xmin, xmax, ymin, ymax))
+                cell = defaultHighlightCell;
+            else
+                cell = defaultInvalidCell;
+
             for (int x = xmin; x <= xmax; x++)
             {
                 for (int y = ymin; y <= ymax; y++)
                 {
-                    MyMap.SetOverride(defaultHighlightCell, x, y);
+                    MyMap.SetOverride(cell, x, y);
                 }
             }
+        }
+
+        private bool isValidSelection(int xmin, int xmax, int ymin, int ymax)
+        {
+            int cost = 5 * (ymax - ymin + 1) * (xmax - xmin + 1);
+            if (!Resources.CanAfford(ResourceType.WOOD, cost))
+                return false;
+
+            foreach (Building build in buildings)
+            {
+                if (build.OverlapsRectangle(xmin, xmax, ymin, ymax))
+                    return false;
+            }
+
+            return true;
         }
 
         private void keyboardMove(KeyboardState ks)
