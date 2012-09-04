@@ -17,7 +17,8 @@ namespace CowMouse
     {
         private const string TileSheetPath = @"Images\Tilesets\TileSheet";
 
-        private ResourceTracker Resources { get; set; }
+        public ResourceTracker Resources { get; private set; }
+        private HUD HUD { get; set; }
 
         private MapCell defaultHighlightCell { get; set; }
 
@@ -25,6 +26,14 @@ namespace CowMouse
             : base(game, TileSheetPath)
         {
             Resources = new ResourceTracker();
+            HUD = new HUD(this);
+        }
+
+        protected override void LoadContent()
+        {
+            base.LoadContent();
+
+            HUD.LoadContent();
         }
 
         public override void Initialize()
@@ -33,6 +42,13 @@ namespace CowMouse
 
             Resources.GetIncome(ResourceType.WOOD, 500);
             defaultHighlightCell = new MapCell(2, 0, 0);
+        }
+
+        public override void Draw(GameTime gameTime)
+        {
+            base.Draw(gameTime);
+
+            HUD.Draw(gameTime);
         }
 
         protected override TileMap makeMap()
@@ -111,7 +127,7 @@ namespace CowMouse
             //this is replacable code, just a stand-in!
             //if we can afford it, buy a bunch of wood flooring
             int cost = 5 * (xmax - xmin + 1) * (ymax - ymin + 1);
-            if (Resources.CanAfford(ResourceType.WOOD, cost))
+            if (Resources.SafeSpend(ResourceType.WOOD, cost))
             {
                 MapCell floorCell = new MapCell(70, 0, 0);
 
