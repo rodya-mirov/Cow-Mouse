@@ -17,10 +17,11 @@ namespace CowMouse
     /// </summary>
     public class CowMouseGame : Microsoft.Xna.Framework.Game
     {
-        GraphicsDeviceManager graphics;
-        SpriteBatch spriteBatch;
+        public GraphicsDeviceManager graphics { get; private set; }
+        public SpriteBatch spriteBatch { get; private set; }
 
-        WorldManager worldManager;
+        public WorldManager worldManager { get { return drawComponent.WorldManager; } }
+        public WorldComponent drawComponent { get; private set; }
 
         public CowMouseGame()
         {
@@ -36,11 +37,13 @@ namespace CowMouse
         /// </summary>
         protected override void Initialize()
         {
-            worldManager = new WorldManager(this);
-            worldManager.Enabled = true;
-            worldManager.Visible = true;
+            WorldManager manager = new WorldManager(this);
+            drawComponent = new WorldComponent(this, manager);
 
-            Components.Add(worldManager);
+            drawComponent.Enabled = true;
+            drawComponent.Visible = true;
+
+            Components.Add(drawComponent);
 
             base.Initialize();
         }

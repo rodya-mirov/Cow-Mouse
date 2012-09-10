@@ -5,7 +5,7 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace CowMouse
+namespace CowMouse.UserInterface
 {
     /// <summary>
     /// General information display for the user.
@@ -42,7 +42,7 @@ namespace CowMouse
         {
             this.worldManager = worldManager;
 
-            this.batch = new SpriteBatch(this.GraphicsDevice);
+            this.batch = new SpriteBatch(GraphicsDevice);
 
             this.screenWidth = GraphicsDevice.Viewport.Width;
             this.screenHeight = GraphicsDevice.Viewport.Height;
@@ -112,6 +112,11 @@ namespace CowMouse
             }
 
             batch.End();
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            //does nothing for now
         }
     }
 }

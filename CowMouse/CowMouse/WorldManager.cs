@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using TileEngine;
 using Microsoft.Xna.Framework.Input;
+using CowMouse.UserInterface;
 
 namespace CowMouse
 {
@@ -13,32 +14,34 @@ namespace CowMouse
     /// along with all the base functionality of the actual TileMapComponent, which
     /// it extends.
     /// </summary>
-    public class WorldManager : TileMapComponent
+    public class WorldManager : TileMapVisualizer
     {
         private const string TileSheetPath = @"Images\Tilesets\TileSheet";
 
         public ResourceTracker Resources { get; private set; }
-        private HUD HUD { get; set; }
 
         private MapCell defaultHighlightCell { get; set; }
         private MapCell defaultInvalidCell { get; set; }
 
         private SortedSet<Building> buildings;
 
+        public Game Game
+        {
+            get { return base.game; }
+            private set { base.game = value; }
+        }
+
         public WorldManager(Game game)
             : base(game, TileSheetPath)
         {
             Resources = new ResourceTracker();
-            HUD = new HUD(this);
 
             buildings = new SortedSet<Building>();
         }
 
-        protected override void LoadContent()
+        public override void LoadContent()
         {
             base.LoadContent();
-
-            HUD.LoadContent();
         }
 
         public override void Initialize()
@@ -53,8 +56,6 @@ namespace CowMouse
         public override void Draw(GameTime gameTime)
         {
             base.Draw(gameTime);
-
-            HUD.Draw(gameTime);
         }
 
         protected override TileMap makeMap()
