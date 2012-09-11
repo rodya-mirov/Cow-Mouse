@@ -6,6 +6,8 @@ using Microsoft.Xna.Framework;
 using TileEngine;
 using Microsoft.Xna.Framework.Input;
 using CowMouse.UserInterface;
+using CowMouse.NPCs;
+using CowMouse.Buildings;
 
 namespace CowMouse
 {
@@ -14,7 +16,7 @@ namespace CowMouse
     /// along with all the base functionality of the actual TileMapComponent, which
     /// it extends.
     /// </summary>
-    public class WorldManager : TileMapVisualizer
+    public class WorldManager : TileMapManager
     {
         private const string TileSheetPath = @"Images\Tilesets\TileSheet";
 
@@ -24,12 +26,6 @@ namespace CowMouse
         private MapCell defaultInvalidCell { get; set; }
 
         private SortedSet<Building> buildings;
-
-        public Game Game
-        {
-            get { return base.game; }
-            private set { base.game = value; }
-        }
 
         public WorldManager(Game game)
             : base(game, TileSheetPath)
@@ -42,6 +38,8 @@ namespace CowMouse
         public override void LoadContent()
         {
             base.LoadContent();
+
+            TownsMan.LoadContent(this.game);
         }
 
         public override void Initialize()
@@ -72,6 +70,9 @@ namespace CowMouse
 
             MouseState ms = Mouse.GetState();
             updateMouseActions(ms);
+
+            foreach (Building building in buildings)
+                building.Update();
         }
 
         private bool Dragging { get; set; }
@@ -107,9 +108,7 @@ namespace CowMouse
             else if (Dragging)
             {
                 if (MouseClickEndSquare != MouseSquare)
-                {
                     updateSelectedBlock();
-                }
 
                 //NEW right click means save
                 if (rightMouseButtonHeld == ButtonState.Released && ms.RightButton == ButtonState.Pressed)
@@ -133,25 +132,15 @@ namespace CowMouse
 
             if (isValidSelection(xmin, xmax, ymin, ymax))
             {
-                //this is replacable code, just a stand-in!
-                //if we can afford it, buy a bunch of wood flooring
-                int cost = 5 * (xmax - xmin + 1) * (ymax - ymin + 1);
-                if (Resources.SafeSpend(ResourceType.WOOD, cost))
-                {
-                    MapCell floorCell = new MapCell(70, 0, 0);
-
-                    for (int x = xmin; x <= xmax; x++)
-                    {
-                        for (int y = ymin; y <= ymax; y++)
-                        {
-                            MyMap.AddConstructedCell(floorCell, x, y);
-                        }
-                    }
-                }
-
-                Building building = new Building(xmin, xmax, ymin, ymax);
-                buildings.Add(building);
+                Building building = new House(xmin, xmax, ymin, ymax, MyMap);
+                if (Resources.SafeSpend(building.GetCosts()))
+                    addBuilding(building);
             }
+        }
+
+        private void addBuilding(Building building)
+        {
+            buildings.Add(building);
         }
 
         private void updateSelectedBlock()
@@ -184,8 +173,17 @@ namespace CowMouse
 
         private bool isValidSelection(int xmin, int xmax, int ymin, int ymax)
         {
-            int cost = 5 * (ymax - ymin + 1) * (xmax - xmin + 1);
-            if (!Resources.CanAfford(ResourceType.WOOD, cost))
+            if (xmax - xmin <= 0)
+                return false;
+
+            if (ymax - ymin <= 0)
+                return false;
+
+            if (xmax - xmin > 1 && ymax - ymin > 1)
+                return false;
+
+            Building newBuilding = new House(xmin, xmax, ymin, ymax, MyMap);
+            if (!Resources.CanAfford(newBuilding.GetCosts()))
                 return false;
 
             foreach (Building build in buildings)

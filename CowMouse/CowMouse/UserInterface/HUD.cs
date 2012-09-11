@@ -20,7 +20,7 @@ namespace CowMouse.UserInterface
 
         private WorldManager worldManager { get; set; }
         private SpriteBatch batch { get; set; }
-        private GraphicsDevice GraphicsDevice { get { return worldManager.Game.GraphicsDevice; } }
+        private GraphicsDevice GraphicsDevice { get { return worldManager.game.GraphicsDevice; } }
 
         private ResourceType[] ResourceTypes;
         private ResourceTracker ResourceTracker { get { return worldManager.Resources; } }
@@ -86,10 +86,10 @@ namespace CowMouse.UserInterface
         public void LoadContent()
         {
             if (Texture == null)
-                Texture = worldManager.Game.Content.Load<Texture2D>(TexturePath);
+                Texture = worldManager.game.Content.Load<Texture2D>(TexturePath);
 
             if (Font == null)
-                Font = worldManager.Game.Content.Load<SpriteFont>(FontPath);
+                Font = worldManager.game.Content.Load<SpriteFont>(FontPath);
         }
 
         public void Draw(GameTime gameTime)

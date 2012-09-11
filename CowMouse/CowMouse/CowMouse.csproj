@@ -110,10 +110,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Building.cs" />
+    <Compile Include="Buildings\Building.cs" />
+    <Compile Include="Buildings\House.cs" />
+    <Compile Include="NPCs\TownsMan.cs" />
     <Compile Include="WorldComponent.cs" />
     <Compile Include="UserInterface\HUD.cs" />
-    <Compile Include="InGameObject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="CowMouseGame.cs" />

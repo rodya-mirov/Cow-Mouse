@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace CowMouse
+namespace CowMouse.Buildings
 {
-    public class Building : IComparable<Building>
+    public abstract class Building : IComparable<Building>
     {
         public int XMin { get; private set; }
         public int YMin { get; private set; }
@@ -92,5 +92,9 @@ namespace CowMouse
             else
                 return this.YMax - b.YMax;
         }
+
+        public abstract void Update();
+
+        public abstract Dictionary<ResourceType, int> GetCosts();
     }
 }
