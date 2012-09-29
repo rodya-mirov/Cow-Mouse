@@ -22,12 +22,39 @@ namespace CowMouse.NPCs
 
         protected int sourceIndex = 0;
 
-        public TownsMan(CowMouseGame game, int x, int y, TileMap map)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="game"></param>
+        /// <param name="xCoordinate"></param>
+        /// <param name="yCoordinate"></param>
+        /// <param name="usingTileCoordinates">True if x,y are referring to SQUARES, or False if they are in-world "pixels"</param>
+        /// <param name="map"></param>
+        public TownsMan(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
         {
             this.Game = game;
-            this.xPos = x;
-            this.yPos = y;
+
+            if (usingTileCoordinates)
+            {
+                this.xPos = xCoordinate * Tile.TileInGameWidth;
+                this.yPos = yCoordinate * Tile.TileInGameHeight;
+            }
+            else
+            {
+                this.xPos = xCoordinate;
+                this.yPos = yCoordinate;
+            }
+
             this.Map = map;
+
+            this.destinations = new Queue<Point>();
+
+            destinations.Enqueue(new Point(0, 0));
+            destinations.Enqueue(new Point(3, 0));
+            destinations.Enqueue(new Point(1, 0));
+            destinations.Enqueue(new Point(2, 2));
+            destinations.Enqueue(new Point(4, 4));
+            destinations.Enqueue(new Point(2, 5));
         }
 
         public static void LoadContent(Game game)
@@ -49,14 +76,68 @@ namespace CowMouse.NPCs
         public override int xPositionWorld { get { return xPos; } }
         public override int yPositionWorld { get { return yPos; } }
 
+        protected const int halfWidth = 10;
+        protected const int width = halfWidth * 2;
+        protected const int halfHeight = 10;
+        protected const int height = halfHeight * 2;
+
+        public override Rectangle InWorldPixelBoundingBox
+        {
+            get
+            {
+                return new Rectangle(
+                    xPos - halfWidth,
+                    yPos - halfHeight,
+                    width,
+                    height
+                    );
+            }
+        }
+
+        protected int xDestination { get; set; }
+        protected int yDestination { get; set; }
+
+        protected Queue<Point> destinations;
+
         public override void Update()
         {
-            //does nothing
+            if (xDestination < xPositionWorld)
+            {
+                sourceIndex = 2;
+                xPos -= 1;
+            }
+            else if (xDestination > xPositionWorld)
+            {
+                sourceIndex = 1;
+                xPos += 1;
+            }
+            else if (yDestination < yPositionWorld)
+            {
+                sourceIndex = 0;
+                yPos -= 1;
+            }
+            else if (yDestination > yPositionWorld)
+            {
+                sourceIndex = 3;
+                yPos += 1;
+            }
+            else
+            {
+                Point p = destinations.Dequeue();
+                SetDestination(p.X, p.Y);
+                destinations.Enqueue(p);
+            }
         }
 
         public override Texture2D Texture
         {
             get { return townsManTexture; }
+        }
+
+        protected void SetDestination(int xSquare, int ySquare)
+        {
+            xDestination = FindXCoordinate(xSquare, ySquare);
+            yDestination = FindYCoordinate(xSquare, ySquare);
         }
     }
 }

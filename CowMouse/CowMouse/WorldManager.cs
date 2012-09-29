@@ -26,6 +26,7 @@ namespace CowMouse
         private MapCell defaultInvalidCell { get; set; }
 
         private SortedSet<Building> buildings;
+        private Queue<TownsMan> npcs;
 
         public WorldManager(Game game)
             : base(game, TileSheetPath)
@@ -33,6 +34,21 @@ namespace CowMouse
             Resources = new ResourceTracker();
 
             buildings = new SortedSet<Building>();
+
+            npcs = new Queue<TownsMan>();
+            npcs.Enqueue(
+                new TownsMan((CowMouseGame)this.game, 2, 0, true, this.MyMap)
+                );
+
+        }
+
+        protected override IEnumerable<InGameObject> InGameObjects
+        {
+            get
+            {
+                foreach (TownsMan man in npcs)
+                    yield return man;
+            }
         }
 
         public override void LoadContent()
