@@ -41,6 +41,7 @@ namespace CowMouse.NPCs
 
                 if (goalLog != null)
                 {
+                    goalLog.MarkForCollection(this);
                     makePathToLog();
                 }
             }
@@ -53,8 +54,11 @@ namespace CowMouse.NPCs
 
             CowMouseGame myGame = (CowMouseGame)Game;
 
-            foreach (InanimateObject obj in myGame.worldManager.Carryables)
+            foreach (Carryable obj in myGame.worldManager.Carryables)
             {
+                if (obj.IsMarkedForCollection || !obj.CanBePickedUp)
+                    continue;
+
                 Log log = (obj as Log);
                 if (log != null)
                 {
@@ -75,7 +79,32 @@ namespace CowMouse.NPCs
             int destX = FindXSquare(goalLog.xPositionWorld, goalLog.yPositionWorld);
             int destY = FindYSquare(goalLog.xPositionWorld, goalLog.yPositionWorld);
 
-            SetDestination(destX, destY);
+            int startX = FindXSquare(this.xPositionWorld, this.yPositionWorld);
+            int startY = FindYSquare(this.xPositionWorld, this.yPositionWorld);
+
+            int pathX = startX;
+            int pathY = startY;
+
+            while (pathX < destX)
+            {
+                pathX++;
+                QueuedDestinations.Enqueue(new Point(pathX, pathY));
+            }
+            while (pathX > destX)
+            {
+                pathX--;
+                QueuedDestinations.Enqueue(new Point(pathX, pathY));
+            }
+            while (pathY < destY)
+            {
+                pathY++;
+                QueuedDestinations.Enqueue(new Point(pathX, pathY));
+            }
+            while (pathY > destY)
+            {
+                pathY--;
+                QueuedDestinations.Enqueue(new Point(pathX, pathY));
+            }
         }
     }
 }

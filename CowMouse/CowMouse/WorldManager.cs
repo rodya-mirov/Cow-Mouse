@@ -29,7 +29,7 @@ namespace CowMouse
         private SortedSet<Building> buildings;
 
         private Queue<LogHunter> logHunters;
-        private Queue<InanimateObject> inanimateObjects;
+        private Queue<Carryable> inanimateObjects;
 
         public WorldManager(Game game)
             : base(game, TileSheetPath)
@@ -44,18 +44,19 @@ namespace CowMouse
         #region Starting Object Creation
         private void makeStartingInGameObjects()
         {
-            inanimateObjects = new Queue<InanimateObject>();
+            inanimateObjects = new Queue<Carryable>();
             makeRandomLogs();
 
             logHunters = new Queue<LogHunter>();
             logHunters.Enqueue(new LogHunter((CowMouseGame)game, 0, 0, true, this.MyMap));
+            logHunters.Enqueue(new LogHunter((CowMouseGame)game, 10, 10, true, this.MyMap));
         }
 
         private void makeRandomLogs()
         {
             Random r = new Random();
 
-            int numLogs = 20;
+            int numLogs = 40;
 
             List<Point> placed = new List<Point>(numLogs);
 
@@ -97,7 +98,7 @@ namespace CowMouse
         {
             get
             {
-                foreach (InanimateObject obj in inanimateObjects)
+                foreach (Carryable obj in inanimateObjects)
                     yield return obj;
 
                 foreach (LogHunter obj in logHunters)
@@ -105,14 +106,19 @@ namespace CowMouse
             }
         }
 
-        public IEnumerable<InanimateObject> Carryables
+        /// <summary>
+        /// Enumerates all the valid carryables in the world.
+        /// 
+        /// Does NOT cull based on CanBePickedUp or IsMarkedForCollection
+        /// or anything else like that.
+        /// </summary>
+        public IEnumerable<Carryable> Carryables
         {
             get
             {
-                foreach (InanimateObject obj in inanimateObjects)
+                foreach (Carryable obj in inanimateObjects)
                 {
-                    if (obj.CanBePickedUp)
-                        yield return obj;
+                    yield return obj;
                 }
             }
         }

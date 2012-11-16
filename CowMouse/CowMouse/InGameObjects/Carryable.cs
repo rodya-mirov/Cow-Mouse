@@ -6,7 +6,7 @@ using TileEngine;
 
 namespace CowMouse.InGameObjects
 {
-    public abstract class InanimateObject : InGameObject
+    public abstract class Carryable : InGameObject
     {
         /// <summary>
         /// Returns true if this object can currently be picked up.
@@ -45,5 +45,27 @@ namespace CowMouse.InGameObjects
         /// is happening (cursed items?  idk)
         /// </summary>
         public abstract void GetPutDown();
+
+        /// <summary>
+        /// Represents whether someone has "called" this object.
+        /// Used to prevent two collectors chasing the same object.
+        /// </summary>
+        public abstract bool IsMarkedForCollection { get; }
+
+        /// <summary>
+        /// Marks the object for collection with the specified collector.
+        /// Typically this should end with IsMarkedForCollection to be
+        /// true.  It's fine to assume IsMarkedForCollection is false when
+        /// the method starts.
+        /// </summary>
+        /// <param name="collector"></param>
+        public abstract void MarkForCollection(InGameObject collector);
+
+        /// <summary>
+        /// Returns the current object which is intending to collect
+        /// this object.  Undefined behavior when IsMarkedForCollection
+        /// is false.
+        /// </summary>
+        public abstract InGameObject IntendedCollector { get; }
     }
 }

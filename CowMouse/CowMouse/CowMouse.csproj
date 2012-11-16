@@ -112,7 +112,7 @@
   <ItemGroup>
     <Compile Include="Buildings\Building.cs" />
     <Compile Include="Buildings\House.cs" />
-    <Compile Include="InGameObjects\InanimateObject.cs" />
+    <Compile Include="InGameObjects\Carryable.cs" />
     <Compile Include="InGameObjects\Log.cs" />
     <Compile Include="NPCs\LogHunter.cs" />
     <Compile Include="NPCs\TownsMan.cs" />

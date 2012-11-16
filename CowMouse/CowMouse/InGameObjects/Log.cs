@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace CowMouse.InGameObjects
 {
-    public class Log : InanimateObject
+    public class Log : Carryable
     {
         protected CowMouseGame Game { get; set; }
         protected int xPos { get; set; }
@@ -18,6 +18,9 @@ namespace CowMouse.InGameObjects
         #region Carrying business
         protected bool isBeingCarried;
         protected InGameObject carryingPerson;
+
+        protected bool isMarkedForCollection;
+        protected InGameObject intendedCollector;
 
         public override bool CanBePickedUp { get { return !IsBeingCarried; } }
         public override bool IsBeingCarried { get { return isBeingCarried; } }
@@ -39,6 +42,24 @@ namespace CowMouse.InGameObjects
 
             isBeingCarried = false;
             carryingPerson = null;
+
+            isMarkedForCollection = false;
+            intendedCollector = null;
+        }
+
+        public override bool IsMarkedForCollection { get { return isMarkedForCollection; } }
+        public override InGameObject IntendedCollector { get { return intendedCollector; } }
+
+        public override void MarkForCollection(InGameObject collector)
+        {
+            if (isMarkedForCollection)
+                throw new InvalidOperationException("This is already marked for collection!");
+
+            if (!CanBePickedUp)
+                throw new InvalidOperationException("Can't mark this for collection because it isn't valid to pick it up.");
+
+            isMarkedForCollection = true;
+            intendedCollector = collector;
         }
         #endregion
 
