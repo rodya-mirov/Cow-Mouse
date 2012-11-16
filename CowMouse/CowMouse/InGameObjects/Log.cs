@@ -8,12 +8,39 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace CowMouse.InGameObjects
 {
-    public class Log : InGameObject
+    public class Log : InanimateObject
     {
         protected CowMouseGame Game { get; set; }
         protected int xPos { get; set; }
         protected int yPos { get; set; }
         protected TileMap Map { get; set; }
+
+        #region Carrying business
+        protected bool isBeingCarried;
+        protected InGameObject carryingPerson;
+
+        public override bool CanBePickedUp { get { return !IsBeingCarried; } }
+        public override bool IsBeingCarried { get { return isBeingCarried; } }
+        protected override InGameObject CarryingPerson { get { return carryingPerson; } }
+
+        public override void GetPickedUp(InGameObject picker)
+        {
+            if (!CanBePickedUp)
+                throw new InvalidOperationException("Can't be picked up right now.");
+
+            isBeingCarried = true;
+            carryingPerson = picker;
+        }
+
+        public override void GetPutDown()
+        {
+            if (!IsBeingCarried)
+                throw new InvalidOperationException("Isn't being carried right now.");
+
+            isBeingCarried = false;
+            carryingPerson = null;
+        }
+        #endregion
 
         protected static Texture2D logTexture { get; set; }
         protected const string logTexturePath = @"Images\Objects\Logs";
@@ -86,11 +113,34 @@ namespace CowMouse.InGameObjects
 
         public override void Update()
         {
+            if (IsBeingCarried)
+            {
+                xPos = CarryingPerson.xPositionWorld;
+                yPos = CarryingPerson.yPositionWorld;
+            }
         }
 
         public override Texture2D Texture
         {
             get { return logTexture; }
+        }
+
+        public override int xPositionDraw
+        {
+            get
+            {
+                return base.xPositionDraw;
+            }
+        }
+
+        private const int carryHeight = -20;
+
+        public override int yPositionDraw
+        {
+            get
+            {
+                return base.yPositionDraw + (IsBeingCarried ? carryHeight : 0);
+            }
         }
     }
 }

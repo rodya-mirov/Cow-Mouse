@@ -29,7 +29,7 @@ namespace CowMouse
         private SortedSet<Building> buildings;
 
         private Queue<LogHunter> logHunters;
-        private Queue<Log> logs;
+        private Queue<InanimateObject> inanimateObjects;
 
         public WorldManager(Game game)
             : base(game, TileSheetPath)
@@ -41,35 +41,14 @@ namespace CowMouse
             makeStartingInGameObjects();
         }
 
+        #region Starting Object Creation
         private void makeStartingInGameObjects()
         {
-            logs = new Queue<Log>();
+            inanimateObjects = new Queue<InanimateObject>();
             makeRandomLogs();
 
             logHunters = new Queue<LogHunter>();
             logHunters.Enqueue(new LogHunter((CowMouseGame)game, 0, 0, true, this.MyMap));
-        }
-
-        /// <summary>
-        /// Removed the specified log from the list.  Returns true iff the log was actually found.
-        /// </summary>
-        /// <param name="log"></param>
-        /// <returns></returns>
-        public bool removeLog(Log log)
-        {
-            int numLogs = logs.Count;
-            bool found = false;
-
-            for (int i = 0; i < numLogs; i++)
-            {
-                Log temp = logs.Dequeue();
-                if (temp == log)
-                    found = true;
-                else
-                    logs.Enqueue(temp);
-            }
-
-            return found;
         }
 
         private void makeRandomLogs()
@@ -109,37 +88,32 @@ namespace CowMouse
                 }
 
                 placed.Add(p);
-                logs.Enqueue(new Log((CowMouseGame)game, x, y - x, true, this.MyMap));
+                inanimateObjects.Enqueue(new Log((CowMouseGame)game, x, y - x, true, this.MyMap));
             }
         }
-
-        public Log closestLog(int xPositionWorldPixel, int yPositionWorldPixel)
-        {
-            Log bestLog = null;
-            int bestDistance = int.MaxValue;
-
-            foreach(Log candidate in logs)
-            {
-                int newDistance = Math.Abs(candidate.xPositionWorld - xPositionWorldPixel) + Math.Abs(candidate.yPositionWorld - yPositionWorldPixel);
-                if (bestLog == null || newDistance < bestDistance)
-                {
-                    bestDistance = newDistance;
-                    bestLog = candidate;
-                }
-            }
-
-            return bestLog;
-        }
+        #endregion
 
         protected override IEnumerable<InGameObject> InGameObjects
         {
             get
             {
-                foreach (Log obj in logs)
+                foreach (InanimateObject obj in inanimateObjects)
                     yield return obj;
 
                 foreach (LogHunter obj in logHunters)
                     yield return obj;
+            }
+        }
+
+        public IEnumerable<InanimateObject> Carryables
+        {
+            get
+            {
+                foreach (InanimateObject obj in inanimateObjects)
+                {
+                    if (obj.CanBePickedUp)
+                        yield return obj;
+                }
             }
         }
 

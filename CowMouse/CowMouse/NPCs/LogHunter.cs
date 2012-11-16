@@ -31,20 +31,51 @@ namespace CowMouse.NPCs
             {
                 if (goalLog != null)
                 {
-                    Game.worldManager.removeLog(goalLog);
+                    if (goalLog.CanBePickedUp)
+                        goalLog.GetPickedUp(this);
+
                     goalLog = null;
                 }
 
-                goalLog = Game.worldManager.closestLog(xPositionWorld, yPositionWorld);
+                goalLog = findClosestLog();
 
                 if (goalLog != null)
                 {
-                    int destX = FindXSquare(goalLog.xPositionWorld, goalLog.yPositionWorld);
-                    int destY = FindYSquare(goalLog.xPositionWorld, goalLog.yPositionWorld);
-
-                    SetDestination(destX, destY);
+                    makePathToLog();
                 }
             }
+        }
+
+        private Log findClosestLog()
+        {
+            Log candidate = null;
+            int bestDistance = int.MaxValue;
+
+            CowMouseGame myGame = (CowMouseGame)Game;
+
+            foreach (InanimateObject obj in myGame.worldManager.Carryables)
+            {
+                Log log = (obj as Log);
+                if (log != null)
+                {
+                    int newDistance = Math.Abs(xPositionWorld - log.xPositionWorld) + Math.Abs(yPositionWorld - log.yPositionWorld);
+                    if (newDistance < bestDistance)
+                    {
+                        bestDistance = newDistance;
+                        candidate = log;
+                    }
+                }
+            }
+
+            return candidate;
+        }
+
+        private void makePathToLog()
+        {
+            int destX = FindXSquare(goalLog.xPositionWorld, goalLog.yPositionWorld);
+            int destY = FindYSquare(goalLog.xPositionWorld, goalLog.yPositionWorld);
+
+            SetDestination(destX, destY);
         }
     }
 }
