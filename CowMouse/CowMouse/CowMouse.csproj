@@ -116,6 +116,9 @@
     <Compile Include="InGameObjects\Log.cs" />
     <Compile Include="NPCs\LogHunter.cs" />
     <Compile Include="NPCs\TownsMan.cs" />
+    <Compile Include="Utilities\DataStructures\Heap.cs" />
+    <Compile Include="Utilities\Pathfinding\Path.cs" />
+    <Compile Include="Utilities\Pathfinding\PathHunter.cs" />
     <Compile Include="WorldComponent.cs" />
     <Compile Include="UserInterface\HUD.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -130,8 +133,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CowMouseContent\CowMouseContent.contentproj">
-      <Name>CowMouseContent</Name>
+      <Name>CowMouseContent %28Content%29</Name>
       <XnaReferenceType>Content</XnaReferenceType>
+      <Project>{3455A668-E34E-4979-AD2F-456398856951}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

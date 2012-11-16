@@ -94,6 +94,9 @@ namespace CowMouse
         }
         #endregion
 
+        /// <summary>
+        /// The list of ingameobjects for the purpose of updating, etc.
+        /// </summary>
         protected override IEnumerable<InGameObject> InGameObjects
         {
             get
@@ -207,6 +210,7 @@ namespace CowMouse
             }
         }
 
+        #region Making buildings code
         private void saveDraggedBlock()
         {
             Dragging = false;
@@ -283,6 +287,7 @@ namespace CowMouse
 
             return true;
         }
+        #endregion
 
         private void keyboardMove(KeyboardState ks)
         {
@@ -298,5 +303,72 @@ namespace CowMouse
             if (ks.IsKeyDown(Keys.Right) || ks.IsKeyDown(Keys.D))
                 Camera.Move(2, 0);
         }
+
+        #region Pathing assistance
+        /// <summary>
+        /// Determines whether one can move directly from the start square to the end square.
+        /// 
+        /// Currently, this returns true iff the squares are adjacent and are either in the
+        /// same building or both outside every building.
+        /// 
+        /// Note it returns FALSE when the squares are the same square, because, what?
+        /// </summary>
+        /// <param name="startX"></param>
+        /// <param name="startY"></param>
+        /// <param name="endX"></param>
+        /// <param name="endY"></param>
+        /// <returns></returns>
+        public bool CanMoveFromSquareToSquare(int startX, int startY, int endX, int endY)
+        {
+            int dist = Math.Abs(startX - endX) + Math.Abs(startY - endY);
+            if (dist != 1)
+            {
+                return false;
+            }
+
+            Point start = new Point(startX, startY);
+            Point end = new Point(endX, endY);
+
+            foreach (Building b in buildings)
+            {
+                //this is XOR; so return false if one of the points is inside the building
+                //but the other one is out of the building
+                if (b.ContainsCell(start.X, start.Y) ^ b.ContainsCell(end.X, end.Y))
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Returns an enumeration of the list of points which can be directly moved to
+        /// from the specified point on the map.  Any point (at all!) should be in this
+        /// enumeration if and only if it will pass CanMoveFromSquareToSquare
+        /// with the specified start point.
+        /// </summary>
+        /// <param name="startX"></param>
+        /// <param name="startY"></param>
+        /// <returns></returns>
+        public IEnumerable<Point> GetAdjacentPoints(int startX, int startY)
+        {
+            //try the four cardinal directions, return them if they work
+
+            //left
+            if (CanMoveFromSquareToSquare(startX, startY, startX - 1, startY))
+                yield return new Point(startX - 1, startY);
+
+            //right
+            if (CanMoveFromSquareToSquare(startX, startY, startX + 1, startY))
+                yield return new Point(startX + 1, startY);
+
+            //up
+            if (CanMoveFromSquareToSquare(startX, startY, startX, startY - 1))
+                yield return new Point(startX, startY - 1);
+
+            //down
+            if (CanMoveFromSquareToSquare(startX, startY, startX, startY + 1))
+                yield return new Point(startX, startY + 1);
+        }
+        #endregion
     }
 }
