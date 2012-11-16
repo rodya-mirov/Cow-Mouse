@@ -112,6 +112,8 @@
   <ItemGroup>
     <Compile Include="Buildings\Building.cs" />
     <Compile Include="Buildings\House.cs" />
+    <Compile Include="InGameObjects\Log.cs" />
+    <Compile Include="NPCs\LogHunter.cs" />
     <Compile Include="NPCs\TownsMan.cs" />
     <Compile Include="WorldComponent.cs" />
     <Compile Include="UserInterface\HUD.cs" />

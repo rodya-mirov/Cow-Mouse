@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.Input;
 using CowMouse.UserInterface;
 using CowMouse.NPCs;
 using CowMouse.Buildings;
+using CowMouse.InGameObjects;
 
 namespace CowMouse
 {
@@ -26,7 +27,9 @@ namespace CowMouse
         private MapCell defaultInvalidCell { get; set; }
 
         private SortedSet<Building> buildings;
-        private Queue<TownsMan> npcs;
+
+        private Queue<LogHunter> logHunters;
+        private Queue<Log> logs;
 
         public WorldManager(Game game)
             : base(game, TileSheetPath)
@@ -35,19 +38,108 @@ namespace CowMouse
 
             buildings = new SortedSet<Building>();
 
-            npcs = new Queue<TownsMan>();
-            npcs.Enqueue(
-                new TownsMan((CowMouseGame)this.game, 2, 0, true, this.MyMap)
-                );
+            makeStartingInGameObjects();
+        }
 
+        private void makeStartingInGameObjects()
+        {
+            logs = new Queue<Log>();
+            makeRandomLogs();
+
+            logHunters = new Queue<LogHunter>();
+            logHunters.Enqueue(new LogHunter((CowMouseGame)game, 0, 0, true, this.MyMap));
+        }
+
+        /// <summary>
+        /// Removed the specified log from the list.  Returns true iff the log was actually found.
+        /// </summary>
+        /// <param name="log"></param>
+        /// <returns></returns>
+        public bool removeLog(Log log)
+        {
+            int numLogs = logs.Count;
+            bool found = false;
+
+            for (int i = 0; i < numLogs; i++)
+            {
+                Log temp = logs.Dequeue();
+                if (temp == log)
+                    found = true;
+                else
+                    logs.Enqueue(temp);
+            }
+
+            return found;
+        }
+
+        private void makeRandomLogs()
+        {
+            Random r = new Random();
+
+            int numLogs = 20;
+
+            List<Point> placed = new List<Point>(numLogs);
+
+            for (int i = 0; i < numLogs; i++)
+            {
+                int x = 0;
+                int y = 0;
+                Point p = Point.Zero;
+
+                Random ran = new Random();
+
+                bool isNew = false;
+
+                while (!isNew)
+                {
+                    x = ran.Next(20);
+                    y = ran.Next(20);
+
+                    isNew = true;
+                    p = new Point(x, y);
+
+                    foreach (Point q in placed)
+                    {
+                        if (p.X == q.X && p.Y == q.Y)
+                        {
+                            isNew = false;
+                            break;
+                        }
+                    }
+                }
+
+                placed.Add(p);
+                logs.Enqueue(new Log((CowMouseGame)game, x, y - x, true, this.MyMap));
+            }
+        }
+
+        public Log closestLog(int xPositionWorldPixel, int yPositionWorldPixel)
+        {
+            Log bestLog = null;
+            int bestDistance = int.MaxValue;
+
+            foreach(Log candidate in logs)
+            {
+                int newDistance = Math.Abs(candidate.xPositionWorld - xPositionWorldPixel) + Math.Abs(candidate.yPositionWorld - yPositionWorldPixel);
+                if (bestLog == null || newDistance < bestDistance)
+                {
+                    bestDistance = newDistance;
+                    bestLog = candidate;
+                }
+            }
+
+            return bestLog;
         }
 
         protected override IEnumerable<InGameObject> InGameObjects
         {
             get
             {
-                foreach (TownsMan man in npcs)
-                    yield return man;
+                foreach (Log obj in logs)
+                    yield return obj;
+
+                foreach (LogHunter obj in logHunters)
+                    yield return obj;
             }
         }
 
@@ -56,6 +148,7 @@ namespace CowMouse
             base.LoadContent();
 
             TownsMan.LoadContent(this.game);
+            Log.LoadContent(this.game);
         }
 
         public override void Initialize()

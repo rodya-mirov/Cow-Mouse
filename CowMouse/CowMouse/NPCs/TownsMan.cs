@@ -47,14 +47,8 @@ namespace CowMouse.NPCs
 
             this.Map = map;
 
-            this.destinations = new Queue<Point>();
-
-            destinations.Enqueue(new Point(0, 0));
-            destinations.Enqueue(new Point(3, 0));
-            destinations.Enqueue(new Point(1, 0));
-            destinations.Enqueue(new Point(2, 2));
-            destinations.Enqueue(new Point(4, 4));
-            destinations.Enqueue(new Point(2, 5));
+            this.QueuedDestinations = new Queue<Point>();
+            this.HasDestination = false;
         }
 
         public static void LoadContent(Game game)
@@ -94,39 +88,55 @@ namespace CowMouse.NPCs
             }
         }
 
-        protected int xDestination { get; set; }
-        protected int yDestination { get; set; }
+        protected bool HasDestination;
+        protected Point CurrentDestination;
+        protected Queue<Point> QueuedDestinations;
 
-        protected Queue<Point> destinations;
-
-        public override void Update()
+        /// <summary>
+        /// Move one "in-game pixel" toward the current destination.
+        /// Sets HasDestination to true if we are not there yet, or false
+        /// otherwise.
+        /// 
+        /// This should not be used for path-finding, but rather, when
+        /// used with SetDestination, is used for moving smoothly along
+        /// a path when it's found.
+        /// 
+        /// Notably, this does NOT check passability or anything.  It
+        /// just moves inexorably toward the destination.
+        /// </summary>
+        protected virtual void MoveTowardDestination()
         {
-            if (xDestination < xPositionWorld)
+            int speed = 1;
+
+            if (CurrentDestination.X < xPositionWorld)
             {
                 sourceIndex = 2;
-                xPos -= 1;
+                xPos -= speed;
             }
-            else if (xDestination > xPositionWorld)
+            else if (CurrentDestination.X > xPositionWorld)
             {
                 sourceIndex = 1;
-                xPos += 1;
+                xPos += speed;
             }
-            else if (yDestination < yPositionWorld)
+            else if (CurrentDestination.Y < yPositionWorld)
             {
                 sourceIndex = 0;
-                yPos -= 1;
+                yPos -= speed;
             }
-            else if (yDestination > yPositionWorld)
+            else if (CurrentDestination.Y > yPositionWorld)
             {
                 sourceIndex = 3;
-                yPos += 1;
+                yPos += speed;
             }
-            else
-            {
-                Point p = destinations.Dequeue();
-                SetDestination(p.X, p.Y);
-                destinations.Enqueue(p);
-            }
+
+            HasDestination = (CurrentDestination.X != xPositionWorld || CurrentDestination.Y != yPositionWorld);
+        }
+
+        /// <summary>
+        /// Does nothing, and is just a placeholder.
+        /// </summary>
+        public override void Update()
+        {
         }
 
         public override Texture2D Texture
@@ -134,10 +144,26 @@ namespace CowMouse.NPCs
             get { return townsManTexture; }
         }
 
+        /// <summary>
+        /// Sets the current destination to a specified TILE coordinate.
+        /// </summary>
+        /// <param name="xSquare"></param>
+        /// <param name="ySquare"></param>
         protected void SetDestination(int xSquare, int ySquare)
         {
-            xDestination = FindXCoordinate(xSquare, ySquare);
-            yDestination = FindYCoordinate(xSquare, ySquare);
+            CurrentDestination.X = FindXCoordinate(xSquare, ySquare);
+            CurrentDestination.Y = FindYCoordinate(xSquare, ySquare);
+
+            HasDestination = true;
+        }
+
+        /// <summary>
+        /// Sets the current destination to a specified TILE coordinate.
+        /// </summary>
+        /// <param name="tilePoint"></param>
+        protected void SetDestination(Point tilePoint)
+        {
+            SetDestination(tilePoint.X, tilePoint.Y);
         }
     }
 }
