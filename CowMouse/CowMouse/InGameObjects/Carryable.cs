@@ -67,5 +67,18 @@ namespace CowMouse.InGameObjects
         /// is false.
         /// </summary>
         public abstract InGameObject IntendedCollector { get; }
+
+        #region Tags
+        /// <summary>
+        /// Represents whether or not this is a resource that should be
+        /// collected and moved to a stockpile.
+        /// </summary>
+        public abstract bool IsResource { get; }
+
+        /// <summary>
+        /// Indicates whether or not this is in a stockpile.
+        /// </summary>
+        public abstract bool IsInStockpile { get; }
+        #endregion
     }
 }

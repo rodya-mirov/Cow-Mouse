@@ -5,6 +5,10 @@ using System.Text;
 
 namespace CowMouse.Buildings
 {
+    /// <summary>
+    /// Fundamentally a logical object.
+    /// Represents a building, in terms of bounds.  Fairly abstract.
+    /// </summary>
     public abstract class Building : IComparable<Building>
     {
         public int XMin { get; private set; }
@@ -12,6 +16,11 @@ namespace CowMouse.Buildings
 
         public int XMax { get; private set; }
         public int YMax { get; private set; }
+
+        #region Tags
+        public abstract bool Passable { get; }
+        public abstract bool IsStockpile { get; }
+        #endregion
 
         public Building(int xMin, int xMax, int yMin, int yMax)
         {
@@ -23,7 +32,8 @@ namespace CowMouse.Buildings
         }
 
         /// <summary>
-        /// Determines whether or not this Building contains a specific cell
+        /// Determines whether or not this Building contains a specific cell,
+        /// based on its coordinates.
         /// </summary>
         /// <param name="x"></param>
         /// <param name="y"></param>
@@ -94,7 +104,5 @@ namespace CowMouse.Buildings
         }
 
         public abstract void Update();
-
-        public abstract Dictionary<ResourceType, int> GetCosts();
     }
 }

@@ -22,9 +22,6 @@ namespace CowMouse.UserInterface
         private SpriteBatch batch { get; set; }
         private GraphicsDevice GraphicsDevice { get { return worldManager.game.GraphicsDevice; } }
 
-        private ResourceType[] ResourceTypes;
-        private ResourceTracker ResourceTracker { get { return worldManager.Resources; } }
-
         private int height, width;
         private int screenHeight, screenWidth;
         private int drawOffsetX, drawOffsetY;
@@ -32,10 +29,6 @@ namespace CowMouse.UserInterface
         #region Source Rectangles
         private Rectangle BackgroundSourceRectangle;
         private Rectangle BackgroundTargetRectangle;
-
-        private Dictionary<ResourceType, Rectangle> ResourceSourceRectangles;
-        private Dictionary<ResourceType, Rectangle> ResourceTargetRectangles;
-        private Dictionary<ResourceType, Vector2> ResourceTextLocations;
         #endregion
 
         public HUD(WorldManager worldManager)
@@ -53,8 +46,6 @@ namespace CowMouse.UserInterface
             this.width = this.screenWidth;
             this.drawOffsetX = 0;
 
-            ResourceTypes = (ResourceType[])Enum.GetValues(typeof(ResourceType));
-
             SetupSourceRectangles();
         }
 
@@ -62,25 +53,6 @@ namespace CowMouse.UserInterface
         {
             this.BackgroundSourceRectangle = new Rectangle(0, 0, 200, 70);
             this.BackgroundTargetRectangle = new Rectangle(drawOffsetX, drawOffsetY, width, height);
-
-            this.ResourceSourceRectangles = new Dictionary<ResourceType, Rectangle>();
-            this.ResourceTargetRectangles = new Dictionary<ResourceType, Rectangle>();
-            this.ResourceTextLocations = new Dictionary<ResourceType, Vector2>();
-
-            ResourceSourceRectangles[ResourceType.WOOD] = new Rectangle(1, 71, 18, 17);
-            ResourceSourceRectangles[ResourceType.MONEY] = new Rectangle(20, 71, 17, 17);
-
-            int xpos = drawOffsetX + 15;
-            int ypos = drawOffsetY + 10;
-
-            foreach (ResourceType value in ResourceTypes)
-            {
-                Rectangle sourceRect = ResourceSourceRectangles[value];
-                ResourceTargetRectangles[value] = new Rectangle(xpos, ypos, sourceRect.Width, sourceRect.Height);
-                ResourceTextLocations[value] = new Vector2(xpos + 30, ypos);
-
-                ypos += 25;
-            }
         }
 
         public void LoadContent()
@@ -94,29 +66,26 @@ namespace CowMouse.UserInterface
 
         public void Draw(GameTime gameTime)
         {
-            batch.Begin();
-
-            batch.Draw(Texture, BackgroundTargetRectangle, BackgroundSourceRectangle, Color.White);
-
-            foreach (ResourceType value in ResourceTypes)
+            if (Visible)
             {
-                batch.Draw(Texture,
-                    ResourceTargetRectangles[value],
-                    ResourceSourceRectangles[value],
-                    Color.White);
+                batch.Begin();
 
-                batch.DrawString(Font,
-                    ResourceTracker.CurrentHoldings(value).ToString(),
-                    ResourceTextLocations[value],
-                    Color.Black);
+                batch.Draw(Texture, BackgroundTargetRectangle, BackgroundSourceRectangle, Color.White);
+
+                batch.End();
             }
-
-            batch.End();
         }
 
         public void Update(GameTime gameTime)
         {
             //does nothing for now
+        }
+
+        private bool Visible { get; set; }
+
+        public void ToggleVisible()
+        {
+            Visible = !Visible;
         }
     }
 }

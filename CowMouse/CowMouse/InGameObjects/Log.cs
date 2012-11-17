@@ -5,6 +5,7 @@ using System.Text;
 using TileEngine;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using CowMouse.Buildings;
 
 namespace CowMouse.InGameObjects
 {
@@ -45,6 +46,25 @@ namespace CowMouse.InGameObjects
 
             isMarkedForCollection = false;
             intendedCollector = null;
+
+            determineIfInStockpile();
+        }
+
+        private void determineIfInStockpile()
+        {
+            int xSquare = FindXSquare(xPositionWorld, yPositionWorld);
+            int ySquare = FindYSquare(xPositionWorld, yPositionWorld);
+
+            foreach (Building building in Game.WorldManager.Stockpiles)
+            {
+                if (building.ContainsCell(xSquare, ySquare))
+                {
+                    isInStockpile = true;
+                    return;
+                }
+            }
+
+            isInStockpile = false;
         }
 
         public override bool IsMarkedForCollection { get { return isMarkedForCollection; } }
@@ -60,6 +80,20 @@ namespace CowMouse.InGameObjects
 
             isMarkedForCollection = true;
             intendedCollector = collector;
+        }
+        #endregion
+
+        #region Tags
+        public override bool IsResource
+        {
+            get { return true; }
+        }
+
+        protected bool isInStockpile;
+
+        public override bool IsInStockpile
+        {
+            get { return isInStockpile; }
         }
         #endregion
 

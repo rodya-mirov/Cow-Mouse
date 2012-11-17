@@ -21,35 +21,33 @@ namespace CowMouse
     {
         private const string TileSheetPath = @"Images\Tilesets\TileSheet";
 
-        public ResourceTracker Resources { get; private set; }
-
         private MapCell defaultHighlightCell { get; set; }
         private MapCell defaultInvalidCell { get; set; }
 
         private SortedSet<Building> buildings;
 
-        private Queue<LogHunter> logHunters;
-        private Queue<Carryable> inanimateObjects;
+        private Queue<TownsMan> npcs;
+        private Queue<Carryable> carryables;
 
         public WorldManager(Game game)
             : base(game, TileSheetPath)
         {
-            Resources = new ResourceTracker();
-
             buildings = new SortedSet<Building>();
 
             makeStartingInGameObjects();
+
+            heldButtons = new HashSet<Keys>();
         }
 
         #region Starting Object Creation
         private void makeStartingInGameObjects()
         {
-            inanimateObjects = new Queue<Carryable>();
+            carryables = new Queue<Carryable>();
             makeRandomLogs();
 
-            logHunters = new Queue<LogHunter>();
-            logHunters.Enqueue(new LogHunter((CowMouseGame)game, 0, 0, true, this.MyMap));
-            logHunters.Enqueue(new LogHunter((CowMouseGame)game, 10, 10, true, this.MyMap));
+            npcs = new Queue<TownsMan>();
+            npcs.Enqueue(new LogHunter((CowMouseGame)game, 0, 0, true, this.MyMap));
+            npcs.Enqueue(new LogHunter((CowMouseGame)game, 10, 10, true, this.MyMap));
         }
 
         private void makeRandomLogs()
@@ -89,7 +87,7 @@ namespace CowMouse
                 }
 
                 placed.Add(p);
-                inanimateObjects.Enqueue(new Log((CowMouseGame)game, x, y - x, true, this.MyMap));
+                carryables.Enqueue(new Log((CowMouseGame)game, x, y - x, true, this.MyMap));
             }
         }
         #endregion
@@ -101,16 +99,17 @@ namespace CowMouse
         {
             get
             {
-                foreach (Carryable obj in inanimateObjects)
+                foreach (Carryable obj in carryables)
                     yield return obj;
 
-                foreach (LogHunter obj in logHunters)
+                foreach (LogHunter obj in npcs)
                     yield return obj;
             }
         }
 
+        #region Enumerators and Accessors
         /// <summary>
-        /// Enumerates all the valid carryables in the world.
+        /// Enumerates all the carryables in the world.
         /// 
         /// Does NOT cull based on CanBePickedUp or IsMarkedForCollection
         /// or anything else like that.
@@ -119,12 +118,44 @@ namespace CowMouse
         {
             get
             {
-                foreach (Carryable obj in inanimateObjects)
+                foreach (Carryable obj in carryables)
                 {
                     yield return obj;
                 }
             }
         }
+
+        /// <summary>
+        /// Enumerates all the buildings in the world.
+        /// </summary>
+        public IEnumerable<Building> Buildings
+        {
+            get
+            {
+                foreach (Building b in buildings)
+                    yield return b;
+            }
+        }
+
+        /// <summary>
+        /// Enumerates all the stockpiles in the world.
+        /// Note that stockpiles are buildings, so this is
+        /// a subset of Buildings.
+        /// </summary>
+        public IEnumerable<Building> Stockpiles
+        {
+            get
+            {
+                foreach (Building b in buildings)
+                {
+                    if (b.IsStockpile)
+                    {
+                        yield return b;
+                    }
+                }
+            }
+        }
+        #endregion
 
         public override void LoadContent()
         {
@@ -138,7 +169,6 @@ namespace CowMouse
         {
             base.Initialize();
 
-            Resources.GetIncome(ResourceType.WOOD, 500);
             defaultHighlightCell = new MapCell(2, 0, 0);
             defaultInvalidCell = new MapCell(3, 0, 0);
         }
@@ -172,6 +202,8 @@ namespace CowMouse
         private ButtonState rightMouseButtonHeld { get; set; }
         private Point MouseClickStartSquare { get; set; }
         private Point MouseClickEndSquare { get; set; }
+
+        private HashSet<Keys> heldButtons;
 
         private void updateMouseActions(MouseState ms)
         {
@@ -225,17 +257,26 @@ namespace CowMouse
 
             if (isValidSelection(xmin, xmax, ymin, ymax))
             {
-                Building building = new House(xmin, xmax, ymin, ymax, MyMap);
-                if (Resources.SafeSpend(building.GetCosts()))
-                    addBuilding(building);
+                //This is where we would actually place a building, but I don't have
+                //one planned just yet.
+                Stockpile pile = new Stockpile(xmin, xmax, ymin, ymax, MyMap);
+                addBuilding(pile);
             }
         }
 
+        /// <summary>
+        /// Adds the specified building to the list of buildings.
+        /// </summary>
+        /// <param name="building"></param>
         private void addBuilding(Building building)
         {
             buildings.Add(building);
         }
 
+        /// <summary>
+        /// This updates the part of the map that's highlighted / selected
+        /// by a mouse drag.
+        /// </summary>
         private void updateSelectedBlock()
         {
             MouseClickEndSquare = MouseSquare;
@@ -264,19 +305,23 @@ namespace CowMouse
             }
         }
 
+        /// <summary>
+        /// Determines whether the box has positive area.
+        /// Also checks if this box overlaps any of the existing buildings.
+        /// 
+        /// Does not check if you can afford whatever it is you're doing!
+        /// </summary>
+        /// <param name="xmin"></param>
+        /// <param name="xmax"></param>
+        /// <param name="ymin"></param>
+        /// <param name="ymax"></param>
+        /// <returns></returns>
         private bool isValidSelection(int xmin, int xmax, int ymin, int ymax)
         {
-            if (xmax - xmin <= 0)
+            if (xmax < xmin)
                 return false;
 
-            if (ymax - ymin <= 0)
-                return false;
-
-            if (xmax - xmin > 1 && ymax - ymin > 1)
-                return false;
-
-            Building newBuilding = new House(xmin, xmax, ymin, ymax, MyMap);
-            if (!Resources.CanAfford(newBuilding.GetCosts()))
+            if (ymax < ymin)
                 return false;
 
             foreach (Building build in buildings)
@@ -331,6 +376,10 @@ namespace CowMouse
 
             foreach (Building b in buildings)
             {
+                //we're only concerned with passable buildings
+                if (b.Passable)
+                    continue;
+
                 //this is XOR; so return false if one of the points is inside the building
                 //but the other one is out of the building
                 if (b.ContainsCell(start.X, start.Y) ^ b.ContainsCell(end.X, end.Y))

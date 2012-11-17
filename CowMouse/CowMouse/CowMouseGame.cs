@@ -20,7 +20,7 @@ namespace CowMouse
         public GraphicsDeviceManager graphics { get; private set; }
         public SpriteBatch spriteBatch { get; private set; }
 
-        public WorldManager worldManager { get { return drawComponent.WorldManager; } }
+        public WorldManager WorldManager { get { return drawComponent.WorldManager; } }
         public WorldComponent drawComponent { get; private set; }
 
         public CowMouseGame()
@@ -57,7 +57,7 @@ namespace CowMouse
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            worldManager.SetViewDimensions(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight);
+            WorldManager.SetViewDimensions(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight);
 
             this.IsMouseVisible = true;
         }

@@ -6,6 +6,10 @@ using TileEngine;
 
 namespace CowMouse.Buildings
 {
+    /// <summary>
+    /// An auto-build building which is pretty, but will probably go away soon.
+    /// It's quite rigid and doesn't fit well into my image for the game.
+    /// </summary>
     public class House : Building
     {
         private TileMap Map { get; set; }
@@ -20,14 +24,6 @@ namespace CowMouse.Buildings
                 isHorizontal = true;
             else
                 isHorizontal = false;
-        }
-
-        public override Dictionary<ResourceType, int> GetCosts()
-        {
-            Dictionary<ResourceType, int> costs = new Dictionary<ResourceType, int>();
-            costs[ResourceType.WOOD] = 5 * (XMax - XMin + 1) * (YMax - YMin + 1);
-
-            return costs;
         }
 
         private bool builtFloors = false;
@@ -165,5 +161,17 @@ namespace CowMouse.Buildings
                 Map.GetMapCell(XMax, YMin).AddTile(16, 1);
             }
         }
+
+        #region Tags
+        public override bool Passable
+        {
+            get { return true; }
+        }
+
+        public override bool IsStockpile
+        {
+            get { return false; }
+        }
+        #endregion
     }
 }
