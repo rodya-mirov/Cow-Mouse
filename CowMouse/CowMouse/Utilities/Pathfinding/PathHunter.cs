@@ -27,7 +27,9 @@ namespace CowMouse.Utilities.Pathfinding
         /// 
         /// Returns null if no path was found.
         /// 
-        /// Running time (if no path is found, the worst case) is O(n^2), with n=maxCost
+        /// Running time (if no path is found, the worst case) is O(k+n^2), where
+        ///        n=maxCost
+        ///        k=destinations.Count
         /// 
         /// Assumes no negative cost paths, as in Djikstra's algorithm
         /// </summary>

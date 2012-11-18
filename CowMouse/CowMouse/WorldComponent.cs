@@ -8,6 +8,12 @@ using Microsoft.Xna.Framework.Input;
 
 namespace CowMouse
 {
+    /// <summary>
+    /// This just manages, on the game end, all the different things that need to get drawn
+    /// that don't exist in the game world (like UI elements).  It doesn't do much atm,
+    /// and is basically a stand-in for the existing draw manager.  Will probably go away
+    /// eventually.
+    /// </summary>
     public class WorldComponent : DrawableGameComponent
     {
         public WorldManager WorldManager { get; private set; }

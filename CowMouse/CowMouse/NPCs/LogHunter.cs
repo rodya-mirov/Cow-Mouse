@@ -17,7 +17,7 @@ namespace CowMouse.NPCs
         /// long the longest path is, before the path algorithm just throws up its hands
         /// and leaves you to your own devices.
         /// </summary>
-        protected const int DefaultSearchDepth = 30;
+        protected const int DefaultSearchDepth = 300;
 
         public LogHunter(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
             : base(game, xCoordinate, yCoordinate, usingTileCoordinates, map)
@@ -225,7 +225,7 @@ namespace CowMouse.NPCs
         private void startToLookingForResource()
         {
             //two ways this can go down; either we find something or not.
-            Path path = PathHunter.GetPath(SquareCoordinate(), resourcePositions(), 30, Game.WorldManager);
+            Path path = PathHunter.GetPath(SquareCoordinate(), resourcePositions(), DefaultSearchDepth, Game.WorldManager);
 
             //if we found nothing, we must be done; relax.
             if (path == null)

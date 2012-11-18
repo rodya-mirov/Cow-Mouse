@@ -42,19 +42,41 @@ namespace CowMouse
         #region Starting Object Creation
         private void makeStartingInGameObjects()
         {
+            Console.WriteLine("Setting up world ...");
+
             carryables = new Queue<Carryable>();
-            makeRandomLogs();
+            int radius = 100;
+            makeRandomLogs(radius, -radius, radius, -radius, radius);
+
+            Console.WriteLine("Logged");
 
             npcs = new Queue<TownsMan>();
-            npcs.Enqueue(new LogHunter((CowMouseGame)game, 0, 0, true, this.MyMap));
-            npcs.Enqueue(new LogHunter((CowMouseGame)game, 10, 10, true, this.MyMap));
+            makeRandomNPCs(40);
+
+            Console.WriteLine("NPCed");
         }
 
-        private void makeRandomLogs()
+        private void makeRandomNPCs(int numPeople)
         {
             Random r = new Random();
 
-            int numLogs = 40;
+            for (int i = 0; i < numPeople; i++)
+            {
+                LogHunter npc = new LogHunter(
+                    (CowMouseGame)game,
+                    r.Next(numPeople * 2 + 1) - numPeople,
+                    r.Next(numPeople * 2 + 1) - numPeople,
+                    true,
+                    this.MyMap
+                    );
+
+                npcs.Enqueue(npc);
+            }
+        }
+
+        private void makeRandomLogs(int numLogs, int xmin, int xmax, int ymin, int ymax)
+        {
+            Random r = new Random();
 
             List<Point> placed = new List<Point>(numLogs);
 
@@ -70,8 +92,8 @@ namespace CowMouse
 
                 while (!isNew)
                 {
-                    x = ran.Next(20);
-                    y = ran.Next(20);
+                    x = ran.Next(xmax - xmin + 1) + xmin;
+                    y = ran.Next(ymax - ymin + 1) + ymin;
 
                     isNew = true;
                     p = new Point(x, y);
