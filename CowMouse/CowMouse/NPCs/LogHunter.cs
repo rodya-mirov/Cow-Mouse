@@ -7,9 +7,49 @@ using Microsoft.Xna.Framework;
 using CowMouse.InGameObjects;
 using CowMouse.Utilities.Pathfinding;
 using CowMouse.Buildings;
+using System.Threading;
 
 namespace CowMouse.NPCs
 {
+    /// <summary>
+    /// Townsperson.
+    /// 
+    /// AI paradigm:
+    /// 
+    /// There are three phases of the AI structure (any of which can be
+    /// skipped by the obvious "not doing anything at this stage" code).
+    /// 
+    /// 1) Thinking
+    ///     invoked by: changeMentalStateTo(AIState)
+    ///     overview: this determines what the person will be doing for
+    ///           a while.  Typically this includes some pathing, which
+    ///           will involve the thinkingThread (though technically
+    ///           this could be used for anything, I guess)
+    ///           
+    /// 2) Moving
+    ///     invoked by: (nothing; handled by default during the update() method)
+    ///     overview: if there is a path, it will automatically move along
+    ///           it without outside interference.
+    ///           
+    /// 3) Doing
+    ///     invoked by: endOfPath()
+    ///     overview: after we've done our moving, we should be in a
+    ///           position to start doing things.  So, do them (typically
+    ///           simple), then invoke the next cycle by setting the
+    ///           new mental state (if this isn't done, endOfPath will repeatedly
+    ///           be called)
+    /// 
+    /// Flow:
+    ///     update():
+    ///        if thinking, return
+    ///        if there is a path, follow it, return
+    ///        else invoke endOfPath
+    ///        
+    ///     endofPath():
+    ///        do any simple actions available
+    ///        determine any mental state changes necessary
+    ///        if changeMentalStateTo is not called, will invoke endOfPath every update
+    /// </summary>
     class LogHunter : TownsMan
     {
         /// <summary>
@@ -23,39 +63,52 @@ namespace CowMouse.NPCs
             : base(game, xCoordinate, yCoordinate, usingTileCoordinates, map)
         {
             mentalState = AIState.Start;
+            thinkingThread = null;
         }
 
         public bool IsCarryingItem { get { return hauledItem != null; } }
         protected Carryable hauledItem;
 
+        protected bool IsThinking
+        {
+            get { return thinkingThread != null; }
+        }
+
         protected AIState mentalState;
+        protected Thread thinkingThread;
 
         public override void Update()
         {
-            if (HasDestination)
+            if (IsThinking)
+            {
+                //do nothing while we're thinking :P
+            }
+            else if (HasDestination) //go somewhere if possible
             {
                 MoveTowardDestination();
             }
-            else if (QueuedDestinations.Count > 0)
+            else if (QueuedDestinations.Count > 0) //if we're there, but it was just a corner, queue up the next destination
             {
                 SetDestination(QueuedDestinations.Dequeue());
             }
-            else
+            else //otherwise we're REALLY there, so process that
             {
                 endOfPath();
-                
             }
         }
 
         #region AI Switch
         /// <summary>
-        /// Basically just a switch statement for what happens when we run out of path.
+        /// This is one of two workhorses for the AI, although it's
+        /// mainly a switchboard.  Fundamentally, this deals with the END
+        /// of an action- doing things, rather than deciding things.
         /// </summary>
         private void endOfPath()
         {
             switch (mentalState)
             {
-                case AIState.Start: endPathStart();
+                case AIState.Start:
+                    endPathStart();
                     break;
 
                 case AIState.Looking_For_Resource:
@@ -64,9 +117,6 @@ namespace CowMouse.NPCs
 
                 case AIState.Bringing_Resource_To_Stockpile:
                     endPathBringingResourceToStockpile();
-                    break;
-
-                case AIState.No_Task:
                     break;
 
                 default:
@@ -83,9 +133,17 @@ namespace CowMouse.NPCs
         }
 
         /// <summary>
-        /// End of path for looking for resource; if there was something
-        /// here, pick it up and start hunting for a stockpile.  Otherwise
-        /// throw an error in confusion.
+        /// End of path for looking for resource.
+        /// 
+        /// There are two ways this could happen.
+        /// 1) We ended a path looking for a resource
+        ///         In this case, we should be standing on
+        ///         a resource, so pick it up and carry it
+        ///         to a stockpile.
+        /// 2) We were in the looking for resource state,
+        ///    but didn't find anything.
+        ///         In this case, try again on the pathing
+        ///         thing.
         /// </summary>
         private void endPathLookingForResource()
         {
@@ -105,14 +163,13 @@ namespace CowMouse.NPCs
             }
 
             //Now either we found something or not
-            if (IsCarryingItem)
+            if (IsCarryingItem) //if so, bring it away
             {
                 changeMentalStateTo(AIState.Bringing_Resource_To_Stockpile);
             }
-            else
+            else //if not, try again on this one
             {
-                //if not, this is weird
-                throw new InvalidOperationException("There really should have been a resource here...");
+                changeMentalStateTo(AIState.Looking_For_Resource);
             }
         }
 
@@ -136,11 +193,7 @@ namespace CowMouse.NPCs
 
             if (!isOnStockPile)
             {
-                Path path = PathHunter.GetPath(myPoint, Game.WorldManager.Stockpiles, DefaultSearchDepth, Game.WorldManager);
-                if (path != null)
-                {
-                    loadPathIntoQueue(path);
-                }
+                changeMentalStateTo(AIState.Bringing_Resource_To_Stockpile);
             }
             else
             {
@@ -150,7 +203,9 @@ namespace CowMouse.NPCs
         }
 
         /// <summary>
-        /// This is a 2-level switch statement which is invoked when we change state from one into another.
+        /// This method is one of the two workhorses for the AI (mainly as a switchboard, admittedly).
+        /// This is the BEGINNING of an action, so frequently involves the thinking thread and setting up
+        /// a path.
         /// </summary>
         /// <param name="newState"></param>
         private void changeMentalStateTo(AIState newState)
@@ -161,32 +216,11 @@ namespace CowMouse.NPCs
             switch (newState)
             {
                 case AIState.Looking_For_Resource:
-                    switch (oldState)
-                    {
-                        case AIState.Start:
-                        case AIState.Bringing_Resource_To_Stockpile:
-                            startToLookingForResource();
-                            break;
-
-                        default:
-                            throw new NotImplementedException();
-                    }
+                    startLookingForResource();
                     break;
 
                 case AIState.Bringing_Resource_To_Stockpile:
-                    switch (oldState)
-                    {
-                        case AIState.Looking_For_Resource:
-                            lookingForResourcesToBringingResourceToStockpile();
-                            break;
-
-                        default:
-                            throw new NotImplementedException();
-                    }
-                    break;
-
-                case AIState.No_Task:
-                    //do nothing
+                    bringToStockpile();
                     break;
 
                 default:
@@ -198,23 +232,47 @@ namespace CowMouse.NPCs
         /// Once we're holding something, try to find a stockpile.
         /// If we found a path, follow it; if not, just do nothing.
         /// </summary>
-        private void lookingForResourcesToBringingResourceToStockpile()
+        private void bringToStockpile()
         {
             if (!IsCarryingItem)
                 throw new InvalidOperationException("Shouldn't be looking for a stockpile if we have nothing to put there!");
 
+            //this particular bit of weirdness is to check if it's worth looking for a path,
+            //because starting and stopping multiple threads every frame can be a problem
+            bool stockpilesExist = false;
+            foreach (Building b in Game.WorldManager.Stockpiles)
+            {
+                stockpilesExist = true;
+                break;
+            }
+
+            if (stockpilesExist)
+            {
+                thinkingThread = new Thread(new ThreadStart(bringToStockpile_ThreadHelper));
+                thinkingThread.Start();
+            }
+        }
+
+        int threadHelperCount = 0;
+
+        private void bringToStockpile_ThreadHelper()
+        {
+            threadHelperCount++;
+            Console.WriteLine("So, this is happening: " + threadHelperCount.ToString());
+
             //now it's time to find a stockpile
-            Point myPoint = SquareCoordinate();
-            Path path = PathHunter.GetPath(myPoint, Game.WorldManager.Stockpiles, DefaultSearchDepth, Game.WorldManager);
+            Path path = PathHunter.GetPath(SquareCoordinate(), Game.WorldManager.Stockpiles, DefaultSearchDepth, Game.WorldManager);
 
             if (path != null) //if we found a path, follow it
             {
                 loadPathIntoQueue(path);
             }
-            else //if we didn't find a path, it means there are no stockpiles nearby, so just try again later
+            else //if we didn't find a path, it means there are no stockpiles nearby, so just try again next frame
             {
                 //do nothing
             }
+
+            thinkingThread = null;
         }
 
         /// <summary>
@@ -222,15 +280,35 @@ namespace CowMouse.NPCs
         /// If we found one, mark the resource we found, and move toward it.
         /// If we didn't find one, we must be done, so relax (change to No_Task).
         /// </summary>
-        private void startToLookingForResource()
+        private void startLookingForResource()
+        {
+            //first, we need to mark every possible hauling candidate
+            bool validHaulsExist = false;
+            foreach (Carryable car in Game.WorldManager.Carryables)
+            {
+                if (isValidForHauling(car))
+                {
+                    validHaulsExist = true;
+                    car.MarkForCollection(this);
+                }
+            }
+
+            if (validHaulsExist)
+            {
+                thinkingThread = new Thread(new ThreadStart(this.startLookingForResource_ThreadHelper));
+                thinkingThread.Start();
+            }
+        }
+
+        private void startLookingForResource_ThreadHelper()
         {
             //two ways this can go down; either we find something or not.
-            Path path = PathHunter.GetPath(SquareCoordinate(), resourcePositions(), DefaultSearchDepth, Game.WorldManager);
+            Path path = PathHunter.GetPath(SquareCoordinate(), positionsMarkedForCollection(), DefaultSearchDepth, Game.WorldManager);
 
-            //if we found nothing, we must be done; relax.
+            //if we found nothing, try again next frame
             if (path == null)
             {
-                changeMentalStateTo(AIState.No_Task);
+                //relax
             }
             else //otherwise, go down that path
             {
@@ -241,22 +319,30 @@ namespace CowMouse.NPCs
                 //also, find the resource that we latched onto earlier
                 foreach (Carryable car in Game.WorldManager.Carryables)
                 {
-                    if (isValidForHauling(car) && car.SquareCoordinate() == path.End)
+                    if (car.IsMarkedForCollection &&
+                        car.IntendedCollector == this &&
+                        car.SquareCoordinate() == path.End)
                     {
                         resource = car;
                         break;
                     }
                 }
 
+                //we really should have found a resource, since we pathed to one
                 if (resource == null)
-                {
                     throw new InvalidOperationException("Why didn't we find any...?");
-                }
-                else
+
+                //and unmark everything else (we really did mark a lot didn't we?)
+                foreach (Carryable car in Game.WorldManager.Carryables)
                 {
-                    resource.MarkForCollection(this);
+                    if (car != resource && car.IsMarkedForCollection && car.IntendedCollector == this)
+                    {
+                        car.UnMarkForCollection(this);
+                    }
                 }
             }
+
+            thinkingThread = null;
         }
 
         /// <summary>
@@ -281,16 +367,15 @@ namespace CowMouse.NPCs
         #endregion
 
         /// <summary>
-        /// Just enumerates the valid resource positions; that is, the
-        /// things which can be picked up, are not in stockpiles, and which
-        /// are not marked for pickup yet.
+        /// Just enumerates the positions of all the resources this object
+        /// has already called dibs on.
         /// </summary>
         /// <returns></returns>
-        private IEnumerable<Point> resourcePositions()
+        private IEnumerable<Point> positionsMarkedForCollection()
         {
             foreach (Carryable car in Game.WorldManager.Carryables)
             {
-                if (isValidForHauling(car))
+                if (car.IsMarkedForCollection && car.IntendedCollector == this)
                     yield return car.SquareCoordinate();
             }
         }
@@ -338,8 +423,7 @@ namespace CowMouse.NPCs
     {
         Start,
         Looking_For_Resource,
-        Bringing_Resource_To_Stockpile,
-        No_Task
+        Bringing_Resource_To_Stockpile
     }
     #endregion
 }

@@ -62,6 +62,12 @@ namespace CowMouse.InGameObjects
         public abstract void MarkForCollection(InGameObject collector);
 
         /// <summary>
+        /// Like MarkForCollection, but backwards.
+        /// </summary>
+        /// <param name="collector"></param>
+        public abstract void UnMarkForCollection(InGameObject collector);
+
+        /// <summary>
         /// Returns the current object which is intending to collect
         /// this object.  Undefined behavior when IsMarkedForCollection
         /// is false.

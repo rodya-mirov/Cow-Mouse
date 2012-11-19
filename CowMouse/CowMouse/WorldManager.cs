@@ -45,13 +45,13 @@ namespace CowMouse
             Console.WriteLine("Setting up world ...");
 
             carryables = new Queue<Carryable>();
-            int radius = 100;
+            int radius = 200;
             makeRandomLogs(radius, -radius, radius, -radius, radius);
 
             Console.WriteLine("Logged");
 
             npcs = new Queue<TownsMan>();
-            makeRandomNPCs(40);
+            makeRandomNPCs(30);
 
             Console.WriteLine("NPCed");
         }

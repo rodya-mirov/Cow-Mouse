@@ -81,6 +81,18 @@ namespace CowMouse.InGameObjects
             isMarkedForCollection = true;
             intendedCollector = collector;
         }
+
+        public override void UnMarkForCollection(InGameObject collector)
+        {
+            if (!isMarkedForCollection)
+                throw new InvalidOperationException("Can't unmark what wasn't marked!");
+
+            if (IntendedCollector != collector)
+                throw new InvalidOperationException("Only the marker can unmark the marked, and you are not it!");
+
+            isMarkedForCollection = false;
+            intendedCollector = null;
+        }
         #endregion
 
         #region Tags
