@@ -5,9 +5,9 @@ using System.Text;
 using TileEngine;
 using Microsoft.Xna.Framework;
 using CowMouse.InGameObjects;
-using CowMouse.Utilities.Pathfinding;
 using CowMouse.Buildings;
 using System.Threading;
+using TileEngine.Utilities.Pathfinding;
 
 namespace CowMouse.NPCs
 {
@@ -182,9 +182,9 @@ namespace CowMouse.NPCs
             Point myPoint = SquareCoordinate();
 
             bool isOnStockPile = false;
-            foreach (Building b in Game.WorldManager.Stockpiles)
+            foreach (Point p in Game.WorldManager.StockpilePositions)
             {
-                if (b.ContainsCell(myPoint.X, myPoint.Y))
+                if (p == myPoint)
                 {
                     isOnStockPile = true;
                     break;
@@ -240,7 +240,7 @@ namespace CowMouse.NPCs
             //this particular bit of weirdness is to check if it's worth looking for a path,
             //because starting and stopping multiple threads every frame can be a problem
             bool stockpilesExist = false;
-            foreach (Building b in Game.WorldManager.Stockpiles)
+            foreach (Point p in Game.WorldManager.StockpilePositions)
             {
                 stockpilesExist = true;
                 break;
@@ -253,15 +253,10 @@ namespace CowMouse.NPCs
             }
         }
 
-        int threadHelperCount = 0;
-
         private void bringToStockpile_ThreadHelper()
         {
-            threadHelperCount++;
-            Console.WriteLine("So, this is happening: " + threadHelperCount.ToString());
-
             //now it's time to find a stockpile
-            Path path = PathHunter.GetPath(SquareCoordinate(), Game.WorldManager.Stockpiles, DefaultSearchDepth, Game.WorldManager);
+            Path path = PathHunter.GetPath(SquareCoordinate(), Game.WorldManager.StockpilePositions, DefaultSearchDepth, Game.WorldManager);
 
             if (path != null) //if we found a path, follow it
             {

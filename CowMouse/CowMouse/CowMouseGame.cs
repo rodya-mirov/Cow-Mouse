@@ -9,6 +9,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using TileEngine;
+using CowMouse.UserInterface;
 
 namespace CowMouse
 {
@@ -21,9 +22,19 @@ namespace CowMouse
         public SpriteBatch spriteBatch { get; private set; }
 
         public WorldManager WorldManager { get { return DrawComponent.WorldManager; } }
-        public WorldComponent DrawComponent { get; private set; }
+        public CowMouseComponent DrawComponent { get; private set; }
 
         private FPSComponent fpsCounter { get; set; }
+
+        private SideMenu SideMenu { get; set; }
+
+        //these two are for keyboard input
+        private HashSet<Keys> keysHeld;
+        private Dictionary<Keys, Action> keyBindings;
+
+        //for the window itself
+        private int preferredWindowedWidth;
+        private int preferredWindowedHeight;
 
         public CowMouseGame()
         {
@@ -34,6 +45,8 @@ namespace CowMouse
             Content.RootDirectory = "Content";
 
             keysHeld = new HashSet<Keys>();
+
+            keyBindings = new Dictionary<Keys, Action>();
         }
 
         /// <summary>
@@ -45,21 +58,37 @@ namespace CowMouse
         protected override void Initialize()
         {
             WorldManager manager = new WorldManager(this);
-            DrawComponent = new WorldComponent(this, manager);
+            DrawComponent = new CowMouseComponent(this, manager);
 
             DrawComponent.Enabled = true;
             DrawComponent.Visible = true;
 
             Components.Add(DrawComponent);
 
+            SideMenu = new SideMenu(this);
+            SideMenu.Visible = false;
+            Components.Add(SideMenu);
+
             fpsCounter = new FPSComponent(this);
             fpsCounter.Visible = false;
             Components.Add(fpsCounter);
 
+            setupKeyBindings();
+
             base.Initialize();
         }
 
-        private int preferredWindowedWidth, preferredWindowedHeight;
+        /// <summary>
+        /// Sets up the key bindings!  No more typing the same
+        /// recipe every time!
+        /// </summary>
+        private void setupKeyBindings()
+        {
+            keyBindings[Keys.Escape] = new Action(this.Exit);
+            keyBindings[Keys.M] = new Action(SideMenu.ToggleVisible);
+            keyBindings[Keys.F11] = new Action(this.ToggleFullScreen);
+            keyBindings[Keys.F12] = new Action(fpsCounter.ToggleVisible);
+        }
 
         /// <summary>
         /// Toggle full screen on or off.  Also keeps the camera so that it's centered on the same point
@@ -122,8 +151,6 @@ namespace CowMouse
             // TODO: Unload any non ContentManager content here
         }
 
-        private HashSet<Keys> keysHeld;
-
         /// <summary>
         /// Allows the game to run logic such as updating the world,
         /// checking for collisions, gathering input, and playing audio.
@@ -131,41 +158,30 @@ namespace CowMouse
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            KeyboardState ks = Keyboard.GetState();
-
-            // Allows the game to exit
-            if (ks.IsKeyDown(Keys.Escape))
-                this.Exit();
-
-            //toggle fullscreen for F11
-            if (ks.IsKeyDown(Keys.F11))
-            {
-                if (!keysHeld.Contains(Keys.F11))
-                {
-                    keysHeld.Add(Keys.F11);
-                    ToggleFullScreen();
-                }
-            }
-            else
-            {
-                keysHeld.Remove(Keys.F11);
-            }
-
-            //toggle FPS counter for F12
-            if (ks.IsKeyDown(Keys.F12))
-            {
-                if (!keysHeld.Contains(Keys.F12))
-                {
-                    keysHeld.Add(Keys.F12);
-                    fpsCounter.Visible = !fpsCounter.Visible;
-                }
-            }
-            else
-            {
-                keysHeld.Remove(Keys.F12);
-            }
+            ProcessKeyboardInput();
 
             base.Update(gameTime);
+        }
+
+        private void ProcessKeyboardInput()
+        {
+            KeyboardState ks = Keyboard.GetState();
+
+            foreach (Keys key in keyBindings.Keys)
+            {
+                if (ks.IsKeyDown(key))
+                {
+                    if (!keysHeld.Contains(key))
+                    {
+                        keyBindings[key].Invoke();
+                        keysHeld.Add(key);
+                    }
+                }
+                else
+                {
+                    keysHeld.Remove(key);
+                }
+            }
         }
 
         /// <summary>

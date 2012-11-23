@@ -5,7 +5,6 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using TileEngine;
 using Microsoft.Xna.Framework.Input;
-using CowMouse.UserInterface;
 using CowMouse.NPCs;
 using CowMouse.Buildings;
 using CowMouse.InGameObjects;
@@ -29,9 +28,13 @@ namespace CowMouse
         private Queue<TownsMan> npcs;
         private Queue<Carryable> carryables;
 
-        public WorldManager(Game game)
+        public new CowMouseGame game { get; set; }
+
+        public WorldManager(CowMouseGame game)
             : base(game, TileSheetPath)
         {
+            this.game = game;
+
             buildings = new SortedSet<Building>();
 
             makeStartingInGameObjects();
@@ -63,7 +66,7 @@ namespace CowMouse
             for (int i = 0; i < numPeople; i++)
             {
                 LogHunter npc = new LogHunter(
-                    (CowMouseGame)game,
+                    game,
                     r.Next(numPeople * 2 + 1) - numPeople,
                     r.Next(numPeople * 2 + 1) - numPeople,
                     true,
@@ -109,7 +112,7 @@ namespace CowMouse
                 }
 
                 placed.Add(p);
-                carryables.Enqueue(new Log((CowMouseGame)game, x, y - x, true, this.MyMap));
+                carryables.Enqueue(new Log(game, x, y - x, true, this.MyMap));
             }
         }
         #endregion
@@ -164,7 +167,7 @@ namespace CowMouse
         /// Note that stockpiles are buildings, so this is
         /// a subset of Buildings.
         /// </summary>
-        public IEnumerable<Building> Stockpiles
+        public IEnumerable<Point> StockpilePositions
         {
             get
             {
@@ -172,7 +175,8 @@ namespace CowMouse
                 {
                     if (b.IsStockpile)
                     {
-                        yield return b;
+                        foreach (Point p in b.InternalPoints)
+                            yield return p;
                     }
                 }
             }
@@ -376,7 +380,7 @@ namespace CowMouse
         /// Determines whether one can move directly from the start square to the end square.
         /// 
         /// Currently, this returns true iff the squares are adjacent and are either in the
-        /// same building or both outside every building.
+        /// same building or both outside every building which is not marked passable.
         /// 
         /// Note it returns FALSE when the squares are the same square, because, what?
         /// </summary>
@@ -385,7 +389,7 @@ namespace CowMouse
         /// <param name="endX"></param>
         /// <param name="endY"></param>
         /// <returns></returns>
-        public bool CanMoveFromSquareToSquare(int startX, int startY, int endX, int endY)
+        public override bool CanMoveFromSquareToSquare(int startX, int startY, int endX, int endY)
         {
             int dist = Math.Abs(startX - endX) + Math.Abs(startY - endY);
             if (dist != 1)
@@ -420,7 +424,7 @@ namespace CowMouse
         /// <param name="startX"></param>
         /// <param name="startY"></param>
         /// <returns></returns>
-        public IEnumerable<Point> GetAdjacentPoints(int startX, int startY)
+        public override IEnumerable<Point> GetAdjacentPoints(int startX, int startY)
         {
             //try the four cardinal directions, return them if they work
 

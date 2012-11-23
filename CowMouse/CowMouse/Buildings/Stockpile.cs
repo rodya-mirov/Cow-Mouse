@@ -6,6 +6,9 @@ using TileEngine;
 
 namespace CowMouse.Buildings
 {
+    /// <summary>
+    /// This is pretty much a damn stockpile.  You can pile stock on it.
+    /// </summary>
     public class Stockpile : Building
     {
         TileMap Map;

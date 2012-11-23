@@ -55,9 +55,9 @@ namespace CowMouse.InGameObjects
             int xSquare = FindXSquare(xPositionWorld, yPositionWorld);
             int ySquare = FindYSquare(xPositionWorld, yPositionWorld);
 
-            foreach (Building building in Game.WorldManager.Stockpiles)
+            foreach (Point point in Game.WorldManager.StockpilePositions)
             {
-                if (building.ContainsCell(xSquare, ySquare))
+                if (point.X == xSquare && point.Y == ySquare)
                 {
                     isInStockpile = true;
                     return;
