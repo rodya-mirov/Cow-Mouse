@@ -248,15 +248,17 @@ namespace CowMouse.NPCs
 
             if (stockpilesExist)
             {
-                thinkingThread = new Thread(new ThreadStart(bringToStockpile_ThreadHelper));
+                HashSet<Point> destinations = new HashSet<Point>(Game.WorldManager.StockpilePositions);
+                
+                thinkingThread = new Thread(() => bringToStockpile_ThreadHelper(destinations));
                 thinkingThread.Start();
             }
         }
 
-        private void bringToStockpile_ThreadHelper()
+        private void bringToStockpile_ThreadHelper(HashSet<Point> destinations)
         {
             //now it's time to find a stockpile
-            Path path = PathHunter.GetPath(SquareCoordinate(), Game.WorldManager.StockpilePositions, DefaultSearchDepth, Game.WorldManager);
+            Path path = PathHunter.GetPath(SquareCoordinate(), destinations, DefaultSearchDepth, Game.WorldManager);
 
             if (path != null) //if we found a path, follow it
             {
@@ -290,15 +292,17 @@ namespace CowMouse.NPCs
 
             if (validHaulsExist)
             {
-                thinkingThread = new Thread(new ThreadStart(this.startLookingForResource_ThreadHelper));
+                HashSet<Point> destinations = new HashSet<Point>(positionsMarkedForCollection());
+
+                thinkingThread = new Thread(() => startLookingForResource_ThreadHelper(destinations));
                 thinkingThread.Start();
             }
         }
 
-        private void startLookingForResource_ThreadHelper()
+        private void startLookingForResource_ThreadHelper(HashSet<Point> destinations)
         {
             //two ways this can go down; either we find something or not.
-            Path path = PathHunter.GetPath(SquareCoordinate(), positionsMarkedForCollection(), DefaultSearchDepth, Game.WorldManager);
+            Path path = PathHunter.GetPath(SquareCoordinate(), destinations, DefaultSearchDepth, Game.WorldManager);
 
             //if we found nothing, try again next frame
             if (path == null)

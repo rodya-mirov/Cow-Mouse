@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CowMouse.UserInterface
 {
@@ -101,6 +102,44 @@ namespace CowMouse.UserInterface
             batch.End();
         }
 
+        public override void Update(GameTime gameTime)
+        {
+            base.Update(gameTime);
+
+            if (this.Visible)
+                processMouseActions();
+        }
+
+        private bool leftMouseButtonPressed, leftMouseButtonWasPressed;
+        private bool rightMouseButtonPressed, rightMouseButtonWasPressed;
+
+        private void processMouseActions()
+        {
+            MouseState ms = Mouse.GetState();
+
+            //these coordinates are measured from the upper left of the window
+            int x = ms.X;
+            int y = ms.Y;
+
+            //keep track of current and past button states
+            leftMouseButtonWasPressed = leftMouseButtonPressed;
+            rightMouseButtonWasPressed = rightMouseButtonPressed;
+
+            leftMouseButtonPressed = (ms.LeftButton == ButtonState.Pressed);
+            rightMouseButtonPressed = (ms.RightButton == ButtonState.Pressed);
+
+            //if we JUST pressed the left mouse button
+            if (leftMouseButtonPressed && !leftMouseButtonWasPressed)
+            {
+                //then maybe click a button?
+                foreach (SideMenuButton button in buttons)
+                {
+                    if (button.ContainsPoint(x, y))
+                        button.GetClicked();
+                }
+            }
+        }
+
         #region Button Actions
         /// <summary>
         /// You can probably guess what this does
@@ -149,6 +188,11 @@ namespace CowMouse.UserInterface
         public Rectangle InnerRectangle
         {
             get { return new Rectangle(Left + 1, Top + 1, Width - 2, Height - 2); }
+        }
+
+        public bool ContainsPoint(int x, int y)
+        {
+            return InnerRectangle.Contains(x, y);
         }
         #endregion
 

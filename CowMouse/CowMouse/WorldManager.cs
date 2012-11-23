@@ -24,6 +24,7 @@ namespace CowMouse
         private MapCell defaultInvalidCell { get; set; }
 
         private SortedSet<Building> buildings;
+        private Queue<Building> buildingsQueue;
 
         private Queue<TownsMan> npcs;
         private Queue<Carryable> carryables;
@@ -36,6 +37,7 @@ namespace CowMouse
             this.game = game;
 
             buildings = new SortedSet<Building>();
+            buildingsQueue = new Queue<Building>();
 
             makeStartingInGameObjects();
 
@@ -221,6 +223,11 @@ namespace CowMouse
 
             foreach (Building building in buildings)
                 building.Update();
+
+            foreach (Building b in buildingsQueue)
+                buildings.Add(b);
+
+            buildingsQueue.Clear();
         }
 
         private bool Dragging { get; set; }
@@ -296,7 +303,7 @@ namespace CowMouse
         /// <param name="building"></param>
         private void addBuilding(Building building)
         {
-            buildings.Add(building);
+            buildingsQueue.Enqueue(building);
         }
 
         /// <summary>
