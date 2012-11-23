@@ -137,7 +137,10 @@ namespace CowMouse
 
             WorldManager.SetViewDimensions(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight);
 
-            fpsCounter.Font = Content.Load<SpriteFont>("Fonts/Segoe");
+            SpriteFont font = Content.Load<SpriteFont>("Fonts/Segoe");
+
+            fpsCounter.Font = font;
+            this.SideMenu.Font = font;
 
             this.IsMouseVisible = true;
         }
@@ -162,6 +165,18 @@ namespace CowMouse
 
             base.Update(gameTime);
         }
+
+        #region UI_switches
+        public void SetMouseMode_Stockpiles()
+        {
+            WorldManager.SetMouseMode(MouseMode.MAKE_STOCKPILE);
+        }
+
+        public void SetMouseMode_NoAction()
+        {
+            WorldManager.SetMouseMode(MouseMode.NO_ACTION);
+        }
+        #endregion
 
         private void ProcessKeyboardInput()
         {

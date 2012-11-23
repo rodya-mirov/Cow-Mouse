@@ -31,6 +31,12 @@ namespace CowMouse
 
         public new CowMouseGame game { get; set; }
 
+        public MouseMode MouseMode { get; private set; }
+        public void SetMouseMode(MouseMode mode)
+        {
+            this.MouseMode = mode;
+        }
+
         public WorldManager(CowMouseGame game)
             : base(game, TileSheetPath)
         {
@@ -42,6 +48,8 @@ namespace CowMouse
             makeStartingInGameObjects();
 
             heldButtons = new HashSet<Keys>();
+
+            this.MouseMode = CowMouse.MouseMode.NO_ACTION;
         }
 
         #region Starting Object Creation
@@ -230,6 +238,7 @@ namespace CowMouse
             buildingsQueue.Clear();
         }
 
+        #region Mouse Activities
         private bool Dragging { get; set; }
         private ButtonState leftMouseButtonHeld { get; set; }
         private ButtonState rightMouseButtonHeld { get; set; }
@@ -238,41 +247,73 @@ namespace CowMouse
 
         private HashSet<Keys> heldButtons;
 
+        private bool MouseModeLocked = false;
+        private MouseMode SavedMouseMode = MouseMode.NO_ACTION;
+
         private void updateMouseActions(MouseState ms)
         {
-            //if we changed the button, start that process
-            if (ms.LeftButton != leftMouseButtonHeld)
+            MouseMode relevantMouseMode = (MouseModeLocked ? SavedMouseMode : this.MouseMode);
+
+            switch (relevantMouseMode)
             {
-                leftMouseButtonHeld = ms.LeftButton;
+                case CowMouse.MouseMode.MAKE_STOCKPILE:
+                    //if we changed the button, start that process
+                    if (ms.LeftButton != leftMouseButtonHeld)
+                    {
+                        //start a drag box
+                        if (ms.LeftButton == ButtonState.Pressed)
+                        {
+                            Dragging = true;
+                            MouseClickStartSquare = MouseSquare;
+                            updateSelectedBlock();
 
-                //start a drag box
-                if (leftMouseButtonHeld == ButtonState.Pressed)
-                {
-                    Dragging = true;
-                    MouseClickStartSquare = MouseSquare;
-                    updateSelectedBlock();
-                }
+                            lockMouseMode();
+                        }
 
-                //end a drag box in loss of interest
-                else
-                {
-                    Dragging = false;
-                    MyMap.ClearOverrides();
-                }
+                        //end a drag box in loss of interest
+                        else
+                        {
+                            Dragging = false;
+                            MyMap.ClearOverrides();
+
+                            unlockMouseMode();
+                        }
+                    }
+
+                    //alternately, just continue a drag, if appropriate
+                    else if (Dragging)
+                    {
+                        if (MouseClickEndSquare != MouseSquare)
+                            updateSelectedBlock();
+
+                        //NEW right click means save
+                        if (rightMouseButtonHeld == ButtonState.Released && ms.RightButton == ButtonState.Pressed)
+                            saveDraggedBlock();
+                    }
+                    break;
+
+                case MouseMode.NO_ACTION:
+                    //do nothing?
+                    break;
+
+                default:
+                    throw new NotImplementedException();
             }
-            
-            //alternately, just continue a drag, if appropriate
-            else if (Dragging)
-            {
-                if (MouseClickEndSquare != MouseSquare)
-                    updateSelectedBlock();
 
-                //NEW right click means save
-                if (rightMouseButtonHeld == ButtonState.Released && ms.RightButton == ButtonState.Pressed)
-                    saveDraggedBlock();
+            //save current mouse state for next frame
+            rightMouseButtonHeld = ms.RightButton;
+            leftMouseButtonHeld = ms.LeftButton;
+        }
 
-                rightMouseButtonHeld = ms.RightButton;
-            }
+        private void unlockMouseMode()
+        {
+            this.MouseModeLocked = false;
+        }
+
+        private void lockMouseMode()
+        {
+            this.MouseModeLocked = true;
+            this.SavedMouseMode = this.MouseMode;
         }
 
         #region Making buildings code
@@ -366,6 +407,7 @@ namespace CowMouse
             return true;
         }
         #endregion
+        #endregion
 
         private void keyboardMove(KeyboardState ks)
         {
@@ -452,5 +494,11 @@ namespace CowMouse
                 yield return new Point(startX, startY + 1);
         }
         #endregion
+    }
+
+    public enum MouseMode
+    {
+        NO_ACTION,
+        MAKE_STOCKPILE
     }
 }

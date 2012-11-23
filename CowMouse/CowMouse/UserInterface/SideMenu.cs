@@ -12,6 +12,18 @@ namespace CowMouse.UserInterface
     {
         protected new CowMouseGame Game { get; set; }
 
+        private SpriteFont font;
+        public SpriteFont Font
+        {
+            get { return font; }
+            set
+            {
+                font = value;
+                foreach (SideMenuButton b in buttons)
+                    b.Font = value;
+            }
+        }
+
         private int menuWidth = 60;
         private int menuHeight;
 
@@ -49,19 +61,17 @@ namespace CowMouse.UserInterface
             buttons = new List<SideMenuButton>();
             currentButtonTop = buttonOffsetY;
 
-            addButton(new Action(turnButtonsRed));
-            addButton(new Action(turnButtonsWhite));
-            addButton(new Action(doNothing));
-            addButton(new Action(doNothing));
-            addButton(new Action(doNothing));
-            addButton(new Action(doNothing));
+            addButton(new Action(Game.SetMouseMode_NoAction), "-");
+            addButton(new Action(Game.SetMouseMode_Stockpiles), "Stock\npile");
         }
 
-        private void addButton(Action action)
+        private void addButton(Action action, String text)
         {
             int buttonWidth = menuWidth - (2 * buttonOffsetX + 1);
 
-            SideMenuButton button = new SideMenuButton(buttonWidth, buttonHeight, buttonOffsetX, currentButtonTop, Game, action);
+            SideMenuButton button = new SideMenuButton(
+                buttonWidth, buttonHeight, buttonOffsetX, currentButtonTop,
+                Game, action, text, Font);
 
             buttons.Add(button);
 
@@ -110,6 +120,7 @@ namespace CowMouse.UserInterface
                 processMouseActions();
         }
 
+        #region Mouse Behavior
         private bool leftMouseButtonPressed, leftMouseButtonWasPressed;
         private bool rightMouseButtonPressed, rightMouseButtonWasPressed;
 
@@ -138,26 +149,6 @@ namespace CowMouse.UserInterface
                         button.GetClicked();
                 }
             }
-        }
-
-        #region Button Actions
-        /// <summary>
-        /// You can probably guess what this does
-        /// </summary>
-        private void doNothing()
-        {
-        }
-
-        private void turnButtonsRed()
-        {
-            foreach (SideMenuButton button in buttons)
-                button.Tint = Color.Red;
-        }
-
-        private void turnButtonsWhite()
-        {
-            foreach (SideMenuButton button in buttons)
-                button.Tint = Color.WhiteSmoke;
         }
         #endregion
     }
@@ -201,13 +192,53 @@ namespace CowMouse.UserInterface
 
         public Action Action { get; set; }
 
-        public SideMenuButton(int width, int height, int leftX, int topY, CowMouseGame game, Action action)
+        private String text;
+        public String Text
+        {
+            get { return text; }
+            set
+            {
+                text = value;
+                if (value != null && Font != null)
+                    fixTextPosition();
+            }
+        }
+
+        private SpriteFont font;
+        public SpriteFont Font
+        {
+            get { return font; }
+            set
+            {
+                font = value;
+                if (value != null && Text != null)
+                    fixTextPosition();
+            }
+        }
+
+        private Vector2 TextPosition { get; set; }
+
+        private void fixTextPosition()
+        {
+            Vector2 textSize = Font.MeasureString(Text);
+
+            float textX = Left + Width / 2 - textSize.X / 2;
+            float textY = Top + Height / 2 - textSize.Y / 2;
+
+            TextPosition = new Vector2(textX, textY);
+        }
+
+        public SideMenuButton(int width, int height, int leftX, int topY, CowMouseGame game, Action action,
+            String text, SpriteFont font)
         {
             this.Width = width;
             this.Height = height;
             this.Left = leftX;
             this.Top = topY;
+
             this.Action = action;
+            this.Text = text;
+            this.Font = font;
 
             LoadImage(game);
         }
@@ -231,6 +262,8 @@ namespace CowMouse.UserInterface
         {
             batch.Draw(Blank, OuterRectangle, Color.Black);
             batch.Draw(Blank, InnerRectangle, this.Tint);
+
+            batch.DrawString(font, Text, TextPosition, Color.Black);
         }
 
         public void GetClicked()
