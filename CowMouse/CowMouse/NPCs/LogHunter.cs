@@ -78,6 +78,8 @@ namespace CowMouse.NPCs
         protected Thread thinkingThread;
 
         private GameTime lastUpdateTime;
+        private GameTime lastThinkingThreadStartTime;
+        private int msBetweenThinkingThreads = 500;
 
         public override void Update(GameTime time)
         {
@@ -275,11 +277,32 @@ namespace CowMouse.NPCs
 
             if (stockpilesExist)
             {
-                HashSet<Point> destinations = new HashSet<Point>(Game.WorldManager.StockpilePositions);
-                
-                thinkingThread = new Thread(() => bringToStockpile_ThreadHelper(destinations));
-                thinkingThread.Start();
+                if (hasBeenLongEnoughBetweenThoughts())
+                {
+                    HashSet<Point> destinations = new HashSet<Point>(Game.WorldManager.StockpilePositions);
+
+                    thinkingThread = new Thread(() => bringToStockpile_ThreadHelper(destinations));
+                    thinkingThread.Start();
+
+                    lastThinkingThreadStartTime = lastUpdateTime;
+                }
             }
+        }
+
+        /// <summary>
+        /// Determines whether we've waited long enough since our last thread start.
+        /// </summary>
+        /// <returns></returns>
+        private bool hasBeenLongEnoughBetweenThoughts()
+        {
+            if (lastThinkingThreadStartTime == null)
+                return true;
+
+            TimeSpan interval = lastThinkingThreadStartTime.ElapsedGameTime - lastUpdateTime.ElapsedGameTime;
+            if (interval.TotalMilliseconds >= msBetweenThinkingThreads)
+                return true;
+
+            return false;
         }
 
         private void bringToStockpile_ThreadHelper(HashSet<Point> destinations)
