@@ -78,8 +78,6 @@ namespace CowMouse.NPCs
         protected Thread thinkingThread;
 
         private GameTime lastUpdateTime;
-        private GameTime lastThinkingThreadStartTime;
-        private int msBetweenThinkingThreads = 500;
 
         public override void Update(GameTime time)
         {
@@ -277,32 +275,23 @@ namespace CowMouse.NPCs
 
             if (stockpilesExist)
             {
-                if (hasBeenLongEnoughBetweenThoughts())
+                HashSet<Point> destinations = new HashSet<Point>(Game.WorldManager.StockpilePositions);
+
+                if (destinations.Count > 0)
                 {
-                    HashSet<Point> destinations = new HashSet<Point>(Game.WorldManager.StockpilePositions);
-
                     thinkingThread = new Thread(() => bringToStockpile_ThreadHelper(destinations));
-                    thinkingThread.Start();
-
-                    lastThinkingThreadStartTime = lastUpdateTime;
+                    startThinkingThread();
                 }
             }
         }
 
         /// <summary>
-        /// Determines whether we've waited long enough since our last thread start.
+        /// Starts the thinking thread.
         /// </summary>
-        /// <returns></returns>
-        private bool hasBeenLongEnoughBetweenThoughts()
+        private void startThinkingThread()
         {
-            if (lastThinkingThreadStartTime == null)
-                return true;
-
-            TimeSpan interval = lastThinkingThreadStartTime.ElapsedGameTime - lastUpdateTime.ElapsedGameTime;
-            if (interval.TotalMilliseconds >= msBetweenThinkingThreads)
-                return true;
-
-            return false;
+            //it is conceivable that there will eventually be more to this.
+            thinkingThread.Start();
         }
 
         private void bringToStockpile_ThreadHelper(HashSet<Point> destinations)
@@ -331,22 +320,21 @@ namespace CowMouse.NPCs
         {
             //first, we need to mark every possible hauling candidate
             bool validHaulsExist = false;
+            HashSet<Point> destinations = new HashSet<Point>();
             foreach (Carryable car in Game.WorldManager.Carryables)
             {
                 if (isValidForHauling(car))
                 {
                     validHaulsExist = true;
                     car.MarkForCollection(this);
+                    destinations.Add(car.SquareCoordinate());
                 }
             }
 
             if (validHaulsExist)
             {
-                HashSet<Point> destinations = new HashSet<Point>(positionsMarkedForCollection());
-
                 thinkingThread = new Thread(() => startLookingForResource_ThreadHelper(destinations));
-                thinkingThread.Name = "Hunting for resources to stockpile...";
-                thinkingThread.Start();
+                startThinkingThread();
             }
         }
 
