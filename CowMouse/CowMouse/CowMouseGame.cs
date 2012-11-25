@@ -59,14 +59,12 @@ namespace CowMouse
         {
             WorldManager manager = new WorldManager(this);
             DrawComponent = new CowMouseComponent(this, manager);
-
             DrawComponent.Enabled = true;
             DrawComponent.Visible = true;
-
             Components.Add(DrawComponent);
 
             SideMenu = new SideMenu(this);
-            SideMenu.Visible = false;
+            SideMenu.Visible = true;
             Components.Add(SideMenu);
 
             fpsCounter = new FPSComponent(this);
@@ -169,12 +167,17 @@ namespace CowMouse
         #region UI_switches
         public void SetMouseMode_Stockpiles()
         {
-            WorldManager.SetMouseMode(MouseMode.MAKE_STOCKPILE);
+            WorldManager.SetUserMode(UserMode.MAKE_STOCKPILE);
+        }
+
+        public void SetMouseMode_Barriers()
+        {
+            WorldManager.SetUserMode(UserMode.MAKE_BARRIER);
         }
 
         public void SetMouseMode_NoAction()
         {
-            WorldManager.SetMouseMode(MouseMode.NO_ACTION);
+            WorldManager.SetUserMode(UserMode.NO_ACTION);
         }
         #endregion
 

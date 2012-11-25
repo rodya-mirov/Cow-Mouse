@@ -178,7 +178,7 @@ namespace CowMouse.InGameObjects
             }
         }
 
-        public override void Update()
+        public override void Update(GameTime time)
         {
             if (IsBeingCarried)
             {

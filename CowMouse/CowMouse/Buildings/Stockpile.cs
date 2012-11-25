@@ -13,12 +13,6 @@ namespace CowMouse.Buildings
     {
         TileMap Map;
 
-        /// <summary>
-        /// </summary>
-        /// <param name="xmin"></param>
-        /// <param name="xmax"></param>
-        /// <param name="ymin"></param>
-        /// <param name="ymax"></param>
         public Stockpile(int xmin, int xmax, int ymin, int ymax, TileMap map)
             : base(xmin, xmax, ymin, ymax)
         {

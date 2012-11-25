@@ -77,8 +77,12 @@ namespace CowMouse.NPCs
         protected AIState mentalState;
         protected Thread thinkingThread;
 
-        public override void Update()
+        private GameTime lastUpdateTime;
+
+        public override void Update(GameTime time)
         {
+            this.lastUpdateTime = time;
+
             if (IsThinking)
             {
                 //do nothing while we're thinking :P
@@ -87,7 +91,7 @@ namespace CowMouse.NPCs
             {
                 MoveTowardDestination();
             }
-            else if (QueuedDestinations.Count > 0) //if we're there, but it was just a corner, queue up the next destination
+            else if (QueuedDestinations.Count > 0 && VerifyPath()) //if we're there, but it was just a corner, queue up the next destination
             {
                 SetDestination(QueuedDestinations.Dequeue());
             }
@@ -95,6 +99,29 @@ namespace CowMouse.NPCs
             {
                 endOfPath();
             }
+        }
+
+        /// <summary>
+        /// Checks if we can move from our current position to the
+        /// next position on the queue, and from there to the next,
+        /// and so on until the end.
+        /// </summary>
+        /// <returns></returns>
+        private bool VerifyPath()
+        {
+            Point current = this.SquareCoordinate();
+            foreach (Point next in QueuedDestinations)
+            {
+                if (current != next &&
+                    !Game.WorldManager.CanMoveFromSquareToSquare(current.X, current.Y, next.X, next.Y))
+                {
+                    return false;
+                }
+
+                current = next;
+            }
+
+            return true;
         }
 
         #region AI Switch
@@ -258,7 +285,7 @@ namespace CowMouse.NPCs
         private void bringToStockpile_ThreadHelper(HashSet<Point> destinations)
         {
             //now it's time to find a stockpile
-            Path path = PathHunter.GetPath(SquareCoordinate(), destinations, DefaultSearchDepth, Game.WorldManager);
+            Path path = PathHunter.GetPath(SquareCoordinate(), destinations, DefaultSearchDepth, Game.WorldManager, this.lastUpdateTime);
 
             if (path != null) //if we found a path, follow it
             {
@@ -295,6 +322,7 @@ namespace CowMouse.NPCs
                 HashSet<Point> destinations = new HashSet<Point>(positionsMarkedForCollection());
 
                 thinkingThread = new Thread(() => startLookingForResource_ThreadHelper(destinations));
+                thinkingThread.Name = "Hunting for resources to stockpile...";
                 thinkingThread.Start();
             }
         }
@@ -302,11 +330,12 @@ namespace CowMouse.NPCs
         private void startLookingForResource_ThreadHelper(HashSet<Point> destinations)
         {
             //two ways this can go down; either we find something or not.
-            Path path = PathHunter.GetPath(SquareCoordinate(), destinations, DefaultSearchDepth, Game.WorldManager);
+            Path path = PathHunter.GetPath(SquareCoordinate(), destinations, DefaultSearchDepth, Game.WorldManager, this.lastUpdateTime);
 
             //if we found nothing, try again next frame
             if (path == null)
             {
+                Console.WriteLine("Found nothing");
                 //relax
             }
             else //otherwise, go down that path
@@ -412,6 +441,8 @@ namespace CowMouse.NPCs
         /// <param name="newPath"></param>
         private void loadPathIntoQueue(Path newPath)
         {
+            QueuedDestinations.Clear();
+
             foreach (Point point in newPath.PointsTraveled())
                 QueuedDestinations.Enqueue(point);
         }

@@ -135,7 +135,7 @@ namespace CowMouse.NPCs
         /// <summary>
         /// Does nothing, and is just a placeholder.
         /// </summary>
-        public override void Update()
+        public override void Update(GameTime time)
         {
         }
 
