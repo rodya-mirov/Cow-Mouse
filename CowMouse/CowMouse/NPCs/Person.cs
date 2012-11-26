@@ -5,6 +5,7 @@ using System.Text;
 using TileEngine;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
+using CowMouse.InGameObjects;
 
 namespace CowMouse.NPCs
 {
@@ -12,7 +13,7 @@ namespace CowMouse.NPCs
     /// The physical part of an NPC, including textures etc.
     /// Has no brain, and must be extended to provide this service.
     /// </summary>
-    public abstract class Person : InGameObject
+    public abstract class Person : InWorldObject
     {
         protected CowMouseGame Game { get; set; }
         protected int xPos { get; set; }

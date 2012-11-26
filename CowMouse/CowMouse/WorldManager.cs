@@ -16,7 +16,7 @@ namespace CowMouse
     /// along with all the base functionality of the actual TileMapComponent, which
     /// it extends.
     /// </summary>
-    public class WorldManager : TileMapManager
+    public class WorldManager : TileMapManager<InWorldObject>
     {
         private const string TileSheetPath = @"Images\Tilesets\TileSheet";
 
@@ -37,6 +37,31 @@ namespace CowMouse
             this.UserMode = mode;
         }
 
+        #region Camera Following NPC
+        public bool FollowMode { get; private set; }
+        public Person FollowTarget { get; private set; }
+
+        public void FollowNextNPC()
+        {
+            if (npcs.Count > 0)
+            {
+                FollowMode = true;
+                FollowTarget = npcs.Dequeue();
+                npcs.Enqueue(FollowTarget);
+            }
+            else
+            {
+                FollowMode = false;
+            }
+        }
+
+        public void Unfollow()
+        {
+            FollowMode = false;
+            FollowTarget = null;
+        }
+        #endregion
+
         public WorldManager(CowMouseGame game)
             : base(game, TileSheetPath)
         {
@@ -45,7 +70,7 @@ namespace CowMouse
             buildings = new SortedSet<Building>();
             buildingQueue = new Queue<Building>();
 
-            makeStartingInGameObjects();
+            makeStartingInWorldObjects();
 
             heldButtons = new HashSet<Keys>();
 
@@ -53,7 +78,7 @@ namespace CowMouse
         }
 
         #region Starting Object Creation
-        private void makeStartingInGameObjects()
+        private void makeStartingInWorldObjects()
         {
             Console.WriteLine("Setting up world ...");
 
@@ -64,7 +89,7 @@ namespace CowMouse
             Console.WriteLine("Logged");
 
             npcs = new Queue<Person>();
-            makeRandomNPCs(1);
+            makeRandomNPCs(5);
 
             Console.WriteLine("NPCed");
         }
@@ -130,16 +155,13 @@ namespace CowMouse
         /// <summary>
         /// The list of ingameobjects for the purpose of updating, etc.
         /// </summary>
-        protected override IEnumerable<InGameObject> InGameObjects
+        protected override IEnumerable<InWorldObject> InGameObjects()
         {
-            get
-            {
-                foreach (Carryable obj in carryables)
-                    yield return obj;
+            foreach (Carryable obj in carryables)
+                yield return obj;
 
-                foreach (NPC obj in npcs)
-                    yield return obj;
-            }
+            foreach (NPC obj in npcs)
+                yield return obj;
         }
 
         #region Enumerators and Accessors
@@ -241,8 +263,8 @@ namespace CowMouse
         {
             base.Update(gameTime);
 
-            KeyboardState ks = Keyboard.GetState();
-            keyboardMove(ks);
+            if (FollowMode)
+                Camera.CenterOnPoint(FollowTarget.xPositionDraw, FollowTarget.yPositionDraw);
 
             MouseState ms = Mouse.GetState();
             updateMouseActions(ms);
@@ -491,7 +513,7 @@ namespace CowMouse
 
                     //these do not
                 case CowMouse.UserMode.MAKE_BARRIER:
-                    foreach (InGameObject obj in InGameObjects)
+                    foreach (InWorldObject obj in InGameObjects())
                     {
                         if (obj.SquareBoundingBoxTouches(xmin, ymin, xmax, ymax))
                             return false;
@@ -507,21 +529,6 @@ namespace CowMouse
         }
         #endregion
         #endregion
-
-        private void keyboardMove(KeyboardState ks)
-        {
-            if (ks.IsKeyDown(Keys.Up) || ks.IsKeyDown(Keys.W))
-                Camera.Move(0, -2);
-
-            if (ks.IsKeyDown(Keys.Down) || ks.IsKeyDown(Keys.S))
-                Camera.Move(0, 2);
-
-            if (ks.IsKeyDown(Keys.Left) || ks.IsKeyDown(Keys.A))
-                Camera.Move(-2, 0);
-
-            if (ks.IsKeyDown(Keys.Right) || ks.IsKeyDown(Keys.D))
-                Camera.Move(2, 0);
-        }
 
         #region Pathing assistance
         /// <summary>

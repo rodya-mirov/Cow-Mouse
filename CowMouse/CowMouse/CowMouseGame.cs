@@ -28,13 +28,17 @@ namespace CowMouse
 
         private SideMenu SideMenu { get; set; }
 
-        //these two are for keyboard input
+        //these three are for keyboard input
         private HashSet<Keys> keysHeld;
-        private Dictionary<Keys, Action> keyBindings;
+        private Dictionary<Keys, Action> keyTapBindings;
+        private Dictionary<Keys, Action> keyHoldBindings;
 
         //for the window itself
         private int preferredWindowedWidth;
         private int preferredWindowedHeight;
+
+        //scrollin
+        private int KeyboardMoveSpeed = 2;
 
         public CowMouseGame()
         {
@@ -46,7 +50,8 @@ namespace CowMouse
 
             keysHeld = new HashSet<Keys>();
 
-            keyBindings = new Dictionary<Keys, Action>();
+            keyTapBindings = new Dictionary<Keys, Action>();
+            keyHoldBindings = new Dictionary<Keys, Action>();
         }
 
         /// <summary>
@@ -76,16 +81,41 @@ namespace CowMouse
             base.Initialize();
         }
 
+
+
         /// <summary>
         /// Sets up the key bindings!  No more typing the same
         /// recipe every time!
         /// </summary>
         private void setupKeyBindings()
         {
-            keyBindings[Keys.Escape] = new Action(this.Exit);
-            keyBindings[Keys.M] = new Action(SideMenu.ToggleVisible);
-            keyBindings[Keys.F11] = new Action(this.ToggleFullScreen);
-            keyBindings[Keys.F12] = new Action(fpsCounter.ToggleVisible);
+            keyTapBindings[Keys.Escape] = new Action(this.Exit);
+            keyTapBindings[Keys.M] = new Action(SideMenu.ToggleVisible);
+            keyTapBindings[Keys.F11] = new Action(this.ToggleFullScreen);
+            keyTapBindings[Keys.F12] = new Action(fpsCounter.ToggleVisible);
+            keyTapBindings[Keys.E] = new Action(WorldManager.FollowNextNPC);
+
+            keyHoldBindings[Keys.W] = new Action(() => KeyboardMove(0, -KeyboardMoveSpeed));
+            keyHoldBindings[Keys.A] = new Action(() => KeyboardMove(-KeyboardMoveSpeed, 0));
+            keyHoldBindings[Keys.S] = new Action(() => KeyboardMove(0, KeyboardMoveSpeed));
+            keyHoldBindings[Keys.D] = new Action(() => KeyboardMove(KeyboardMoveSpeed, 0));
+
+            keyHoldBindings[Keys.Left] = new Action(() => KeyboardMove(-KeyboardMoveSpeed, 0));
+            keyHoldBindings[Keys.Right] = new Action(() => KeyboardMove(KeyboardMoveSpeed, 0));
+            keyHoldBindings[Keys.Up] = new Action(() => KeyboardMove(0, -KeyboardMoveSpeed));
+            keyHoldBindings[Keys.Down] = new Action(() => KeyboardMove(0, KeyboardMoveSpeed));
+        }
+
+        /// <summary>
+        /// Move the Camera with respect to the specified change.
+        /// Also deselects follow mode.
+        /// </summary>
+        /// <param name="dx"></param>
+        /// <param name="dy"></param>
+        private void KeyboardMove(int dx, int dy)
+        {
+            Camera.Move(dx, dy);
+            WorldManager.Unfollow();
         }
 
         /// <summary>
@@ -112,14 +142,13 @@ namespace CowMouse
             graphics.PreferredBackBufferWidth = newWidth;
             graphics.PreferredBackBufferHeight = newHeight;
 
-            int centerShiftX = (newWidth - oldWidth) / 2;
-            int centerShiftY = (newHeight - oldHeight) / 2;
-
-            Camera.Move(-centerShiftX, -centerShiftY);
+            Point center = Camera.GetCenter();
 
             graphics.IsFullScreen = !graphics.IsFullScreen;
 
             this.WorldManager.SetViewDimensions(newWidth, newHeight);
+
+            Camera.CenterOnPoint(center);
 
             graphics.ApplyChanges();
         }
@@ -186,17 +215,26 @@ namespace CowMouse
         }
         #endregion
 
+        /// <summary>
+        /// Mash each of the supplied key bindings.
+        /// </summary>
         private void ProcessKeyboardInput()
         {
             KeyboardState ks = Keyboard.GetState();
 
-            foreach (Keys key in keyBindings.Keys)
+            foreach (Keys key in keyHoldBindings.Keys)
+            {
+                if (ks.IsKeyDown(key))
+                    keyHoldBindings[key].Invoke();
+            }
+
+            foreach (Keys key in keyTapBindings.Keys)
             {
                 if (ks.IsKeyDown(key))
                 {
                     if (!keysHeld.Contains(key))
                     {
-                        keyBindings[key].Invoke();
+                        keyTapBindings[key].Invoke();
                         keysHeld.Add(key);
                     }
                 }

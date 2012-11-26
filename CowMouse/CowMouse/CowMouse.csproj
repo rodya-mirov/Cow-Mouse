@@ -116,6 +116,7 @@
     <Compile Include="Buildings\Building.cs" />
     <Compile Include="Buildings\Stockpile.cs" />
     <Compile Include="InGameObjects\Carryable.cs" />
+    <Compile Include="InGameObjects\InWorldObject.cs" />
     <Compile Include="InGameObjects\Log.cs" />
     <Compile Include="NPCs\NPC.cs" />
     <Compile Include="NPCs\Person.cs" />

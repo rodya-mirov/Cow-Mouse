@@ -54,13 +54,21 @@ namespace CowMouse.NPCs
     /// </summary>
     class NPC : Person
     {
+        #region Tags
+        public override bool IsNPC { get { return true; } }
+        #endregion
+
+        private static Random ran;
+
         public NPC(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
             : base(game, xCoordinate, yCoordinate, usingTileCoordinates, map)
         {
             mentalState = AIState.Undecided;
             thinkingThread = null;
 
-            Random ran = new Random();
+            if (ran == null)
+                ran = new Random();
+
             currentEnergy = ran.Next(sleepUntil);
         }
 

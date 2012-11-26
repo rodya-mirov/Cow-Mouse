@@ -6,7 +6,7 @@ using TileEngine;
 
 namespace CowMouse.InGameObjects
 {
-    public abstract class Carryable : InGameObject
+    public abstract class Carryable : InWorldObject
     {
         /// <summary>
         /// Returns true if this object can currently be picked up.
