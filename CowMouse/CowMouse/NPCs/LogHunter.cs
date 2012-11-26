@@ -137,8 +137,8 @@ namespace CowMouse.NPCs
 
         #region Sleeping
         private int currentEnergy;
-        private int sleepUntil = 3500;
-        private int tiredThreshold = 1500;
+        private int sleepUntil = 10000;
+        private int tiredThreshold = 3500;
 
         /// <summary>
         /// Get slightly more tired.  Should be called
@@ -213,9 +213,13 @@ namespace CowMouse.NPCs
             {
                 //do nothing while we're thinking :P
             }
-            else if (HasDestination) //go somewhere if possible
+            else if (HasDestination) //go somewhere if possible, moving slowly along the path
             {
                 MoveTowardDestination();
+            }
+            else if (isExhausted()) //if we just don't have the energy to move anymore, pass out
+            {
+                passOut();
             }
             else if (QueuedDestinations.Count > 0 && VerifyPath()) //if we're there, but it was just a corner, queue up the next destination
             {
@@ -227,6 +231,7 @@ namespace CowMouse.NPCs
             }
         }
 
+        #region Paths
         /// <summary>
         /// Checks if we can move from our current position to the
         /// next position on the queue, and from there to the next,
@@ -261,6 +266,7 @@ namespace CowMouse.NPCs
             foreach (Point point in newPath.PointsTraveled())
                 QueuedDestinations.Enqueue(point);
         }
+        #endregion
 
         #region AI
 
@@ -426,9 +432,9 @@ namespace CowMouse.NPCs
             {
                 changeMentalStateTo(AIState.Bringing_Resource_To_Stockpile);
             }
-            else //if not, try again on this one
+            else //if not, maybe find another task?
             {
-                changeMentalStateTo(AIState.Finding_Resource_To_Haul);
+                changeMentalStateTo(AIState.Undecided);
             }
         }
 
@@ -450,14 +456,24 @@ namespace CowMouse.NPCs
                 }
             }
 
-            if (!isOnStockPile)
-            {
-                changeMentalStateTo(AIState.Bringing_Resource_To_Stockpile);
-            }
-            else
+            if (isOnStockPile) //if we found a stockpile, put our stuff down and move on
             {
                 putDownItem();
                 changeMentalStateTo(AIState.Undecided);
+            }
+            else //if we didn't find the stockpile
+            {
+                if (isTired())
+                {
+                    //if we're tired, give up and find a new task
+                    putDownItem();
+                    changeMentalStateTo(AIState.Undecided);
+                }
+                else
+                {
+                    //if we're not tired, keep trying
+                    changeMentalStateTo(AIState.Bringing_Resource_To_Stockpile);
+                }
             }
         }
 
@@ -664,6 +680,22 @@ namespace CowMouse.NPCs
         /// </summary>
         private void endPathSleeping()
         {
+            changeMentalStateTo(AIState.Sleeping);
+        }
+
+        /// <summary>
+        /// When you just can't go anymore, sleep where you are.
+        /// </summary>
+        private void passOut()
+        {
+            //drop your possessions...
+            if (IsCarryingItem)
+                putDownItem();
+
+            //...forget your cares...
+            QueuedDestinations.Clear();
+
+            //and sleep!
             changeMentalStateTo(AIState.Sleeping);
         }
         #endregion
