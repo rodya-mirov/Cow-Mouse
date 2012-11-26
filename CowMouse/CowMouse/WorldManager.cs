@@ -46,8 +46,30 @@ namespace CowMouse
             if (npcs.Count > 0)
             {
                 FollowMode = true;
-                FollowTarget = npcs.Dequeue();
-                npcs.Enqueue(FollowTarget);
+
+                //this makes the first element last
+                npcs.Enqueue(npcs.Dequeue());
+
+                FollowTarget = npcs.Peek();
+            }
+            else
+            {
+                FollowMode = false;
+            }
+        }
+
+        public void FollowPreviousNPC()
+        {
+            if (npcs.Count > 0)
+            {
+                FollowMode = true;
+
+                //basically, this moves the last element be first
+                int n = npcs.Count - 1;
+                for (int i = 0; i < n; i++)
+                    npcs.Enqueue(npcs.Dequeue());
+
+                FollowTarget = npcs.Peek();
             }
             else
             {

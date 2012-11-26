@@ -93,6 +93,8 @@ namespace CowMouse
             keyTapBindings[Keys.M] = new Action(SideMenu.ToggleVisible);
             keyTapBindings[Keys.F11] = new Action(this.ToggleFullScreen);
             keyTapBindings[Keys.F12] = new Action(fpsCounter.ToggleVisible);
+
+            keyTapBindings[Keys.Q] = new Action(WorldManager.FollowPreviousNPC);
             keyTapBindings[Keys.E] = new Action(WorldManager.FollowNextNPC);
 
             keyHoldBindings[Keys.W] = new Action(() => KeyboardMove(0, -KeyboardMoveSpeed));
