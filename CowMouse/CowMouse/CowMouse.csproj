@@ -117,8 +117,8 @@
     <Compile Include="Buildings\Stockpile.cs" />
     <Compile Include="InGameObjects\Carryable.cs" />
     <Compile Include="InGameObjects\Log.cs" />
-    <Compile Include="NPCs\LogHunter.cs" />
-    <Compile Include="NPCs\TownsMan.cs" />
+    <Compile Include="NPCs\NPC.cs" />
+    <Compile Include="NPCs\Person.cs" />
     <Compile Include="UserInterface\SideMenu.cs" />
     <Compile Include="CowMouseComponent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

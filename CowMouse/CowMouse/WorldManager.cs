@@ -58,13 +58,13 @@ namespace CowMouse
             Console.WriteLine("Setting up world ...");
 
             carryables = new Queue<Carryable>();
-            int radius = 150;
+            int radius = 30;
             makeRandomLogs(radius, -radius, radius, -radius, radius);
 
             Console.WriteLine("Logged");
 
             npcs = new Queue<Person>();
-            makeRandomNPCs(20);
+            makeRandomNPCs(1);
 
             Console.WriteLine("NPCed");
         }
@@ -358,8 +358,9 @@ namespace CowMouse
             //if we're already dragging and we hit the RIGHT mouse button, that means we're saving something
             else if (Dragging)
             {
-                if (MouseClickEndSquare != MouseSquare)
-                    updateSelectedBlock();
+                //we need to updateSelectedBlock every turn, even if we don't move the mouse;
+                //something could have happened to make this invalid
+                updateSelectedBlock();
 
                 //NEW right click means save
                 if (rightMouseButtonHeld == ButtonState.Released && ms.RightButton == ButtonState.Pressed)
@@ -460,8 +461,6 @@ namespace CowMouse
         /// <summary>
         /// Determines whether the box has positive area.
         /// Also checks if this box overlaps any of the existing buildings.
-        /// 
-        /// Does not check if you can afford whatever it is you're doing!
         /// </summary>
         /// <param name="xmin"></param>
         /// <param name="xmax"></param>
@@ -480,6 +479,28 @@ namespace CowMouse
             {
                 if (build.OverlapsRectangle(xmin, xmax, ymin, ymax))
                     return false;
+            }
+
+            //If it's a non-passable object, also make sure it doesn't overlap any dudes
+            switch (UserMode)
+            {
+                    //these generate passable objects
+                case CowMouse.UserMode.MAKE_BEDROOM:
+                case CowMouse.UserMode.MAKE_STOCKPILE:
+                    break;
+
+                    //these do not
+                case CowMouse.UserMode.MAKE_BARRIER:
+                    foreach (InGameObject obj in InGameObjects)
+                    {
+                        if (obj.SquareBoundingBoxTouches(xmin, ymin, xmax, ymax))
+                            return false;
+                    }
+                    break;
+
+                    //this means we forgot to implement something (oops)
+                default:
+                    throw new NotImplementedException();
             }
 
             return true;
