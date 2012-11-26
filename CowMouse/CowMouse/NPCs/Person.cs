@@ -8,7 +8,11 @@ using Microsoft.Xna.Framework;
 
 namespace CowMouse.NPCs
 {
-    public class TownsMan : InGameObject
+    /// <summary>
+    /// The physical part of an NPC, including textures etc.
+    /// Has no brain, and must be extended to provide this service.
+    /// </summary>
+    public abstract class Person : InGameObject
     {
         protected CowMouseGame Game { get; set; }
         protected int xPos { get; set; }
@@ -30,7 +34,7 @@ namespace CowMouse.NPCs
         /// <param name="yCoordinate"></param>
         /// <param name="usingTileCoordinates">True if x,y are referring to SQUARES, or False if they are in-world "pixels"</param>
         /// <param name="map"></param>
-        public TownsMan(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
+        public Person(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
         {
             this.Game = game;
 
@@ -130,13 +134,6 @@ namespace CowMouse.NPCs
             }
 
             HasDestination = (CurrentDestination.X != xPositionWorld || CurrentDestination.Y != yPositionWorld);
-        }
-
-        /// <summary>
-        /// Does nothing, and is just a placeholder.
-        /// </summary>
-        public override void Update(GameTime time)
-        {
         }
 
         public override Texture2D Texture

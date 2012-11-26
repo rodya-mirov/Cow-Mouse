@@ -24,7 +24,7 @@ namespace CowMouse.NPCs
     ///     overview: this determines what the person will be doing for
     ///           a while.  Typically this includes some pathing, which
     ///           will involve the thinkingThread (though technically
-    ///           this could be used for anything, I guess)
+    ///           this could be used for anything)
     ///           
     /// 2) Moving
     ///     invoked by: (nothing; handled by default during the update() method)
@@ -42,6 +42,8 @@ namespace CowMouse.NPCs
     /// Flow:
     ///     update():
     ///        if thinking, return
+    ///        if we're between squares, finish that up
+    ///        if there's an interruption (e.g. exhaustion), cope, return
     ///        if there is a path, follow it, return
     ///        else invoke endOfPath
     ///        
@@ -50,15 +52,16 @@ namespace CowMouse.NPCs
     ///        determine any mental state changes necessary
     ///        if changeMentalStateTo is not called, will invoke endOfPath every update
     /// </summary>
-    class LogHunter : TownsMan
+    class NPC : Person
     {
-        public LogHunter(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
+        public NPC(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
             : base(game, xCoordinate, yCoordinate, usingTileCoordinates, map)
         {
             mentalState = AIState.Undecided;
             thinkingThread = null;
 
-            currentEnergy = tiredThreshold;
+            Random ran = new Random();
+            currentEnergy = ran.Next(sleepUntil);
         }
 
         #region Hauling
@@ -133,6 +136,34 @@ namespace CowMouse.NPCs
                 car.IntendedCollector == this &&
                 car.SquareCoordinate() == myPoint;
         }
+
+        /// <summary>
+        /// Just determines whether there is a stockpile we could haul
+        /// something to.
+        /// </summary>
+        /// <returns></returns>
+        private bool StockpilesExist()
+        {
+            foreach (Point p in Game.WorldManager.StockpilePositions)
+                return true;
+
+            return false;
+        }
+
+        /// <summary>
+        /// Determines whether or not something exists that is worth hauling.
+        /// </summary>
+        /// <returns></returns>
+        private bool ResourcesExist()
+        {
+            foreach (Carryable car in Game.WorldManager.Carryables)
+            {
+                if (isValidForHauling(car))
+                    return true;
+            }
+
+            return false;
+        }
         #endregion
 
         #region Sleeping
@@ -152,7 +183,7 @@ namespace CowMouse.NPCs
                 currentEnergy += 2;
 
                 //color them for sleeping
-                Tint = Color.Blue;
+                Tint = new Color(180, 180, 255); //somewhat blue
             }
             else
             {
@@ -168,8 +199,6 @@ namespace CowMouse.NPCs
                 else
                     Tint = Color.White;
             }
-
-            Console.WriteLine("Energy: " + currentEnergy.ToString() + "; " + sleepUntil.ToString() + "/" + tiredThreshold.ToString());
         }
 
         /// <summary>
@@ -269,7 +298,6 @@ namespace CowMouse.NPCs
         #endregion
 
         #region AI
-
         /// <summary>
         /// Whether or not the thinking thread is running;
         /// generally we shouldn't be doing anything while it
@@ -305,7 +333,7 @@ namespace CowMouse.NPCs
             switch (newState)
             {
                 case AIState.Undecided:
-                    startStateNoTask();
+                    startStateNoTask(oldState);
                     break;
 
                 case AIState.Finding_Resource_To_Haul:
@@ -383,13 +411,14 @@ namespace CowMouse.NPCs
             changeMentalStateTo(AIState.Undecided);
         }
 
-        private void startStateNoTask()
+        private void startStateNoTask(AIState previousState)
         {
-            if (isTired())
+            //if we're tired and we didn't just give up on finding a bed...
+            if (isTired() && previousState != AIState.Looking_For_Bed)
             {
                 changeMentalStateTo(AIState.Looking_For_Bed);
             }
-            else
+            else if (StockpilesExist() && ResourcesExist())
             {
                 changeMentalStateTo(AIState.Finding_Resource_To_Haul);
             }
@@ -485,17 +514,8 @@ namespace CowMouse.NPCs
         {
             if (!IsCarryingItem)
                 throw new InvalidOperationException("Shouldn't be looking for a stockpile if we have nothing to put there!");
-
-            //this particular bit of weirdness is to check if it's worth looking for a path,
-            //because starting and stopping multiple threads every frame can be a problem
-            bool stockpilesExist = false;
-            foreach (Point p in Game.WorldManager.StockpilePositions)
-            {
-                stockpilesExist = true;
-                break;
-            }
-
-            if (stockpilesExist)
+            
+            if (StockpilesExist())
             {
                 HashSet<Point> destinations = new HashSet<Point>(Game.WorldManager.StockpilePositions);
 
@@ -557,7 +577,6 @@ namespace CowMouse.NPCs
             //if we found nothing, try again next frame
             if (path == null)
             {
-                Console.WriteLine("Found nothing");
                 //relax
             }
             else //otherwise, go down that path
@@ -654,8 +673,8 @@ namespace CowMouse.NPCs
 
             if (!isInBedroom)
             {
-                //if we didn't find a bedroom, keep looking
-                changeMentalStateTo(AIState.Looking_For_Bed);
+                //if we didn't find a bedroom, try something else
+                changeMentalStateTo(AIState.Undecided);
             }
             else
             {

@@ -26,7 +26,7 @@ namespace CowMouse
         private SortedSet<Building> buildings;
         private Queue<Building> buildingQueue;
 
-        private Queue<TownsMan> npcs;
+        private Queue<Person> npcs;
         private Queue<Carryable> carryables;
 
         public new CowMouseGame game { get; set; }
@@ -58,13 +58,13 @@ namespace CowMouse
             Console.WriteLine("Setting up world ...");
 
             carryables = new Queue<Carryable>();
-            int radius = 40;
+            int radius = 150;
             makeRandomLogs(radius, -radius, radius, -radius, radius);
 
             Console.WriteLine("Logged");
 
-            npcs = new Queue<TownsMan>();
-            makeRandomNPCs(1);
+            npcs = new Queue<Person>();
+            makeRandomNPCs(20);
 
             Console.WriteLine("NPCed");
         }
@@ -75,7 +75,7 @@ namespace CowMouse
 
             for (int i = 0; i < numPeople; i++)
             {
-                LogHunter npc = new LogHunter(
+                NPC npc = new NPC(
                     game,
                     r.Next(numPeople * 2 + 1) - numPeople,
                     r.Next(numPeople * 2 + 1) - numPeople,
@@ -137,7 +137,7 @@ namespace CowMouse
                 foreach (Carryable obj in carryables)
                     yield return obj;
 
-                foreach (LogHunter obj in npcs)
+                foreach (NPC obj in npcs)
                     yield return obj;
             }
         }
@@ -215,7 +215,7 @@ namespace CowMouse
         {
             base.LoadContent();
 
-            TownsMan.LoadContent(this.game);
+            Person.LoadContent(this.game);
             Log.LoadContent(this.game);
         }
 
