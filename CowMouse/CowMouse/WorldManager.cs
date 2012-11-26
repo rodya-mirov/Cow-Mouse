@@ -31,12 +31,6 @@ namespace CowMouse
 
         public new CowMouseGame game { get; set; }
 
-        public UserMode UserMode { get; private set; }
-        public void SetUserMode(UserMode mode)
-        {
-            this.UserMode = mode;
-        }
-
         #region Camera Following NPC
         /// <summary>
         /// Whether or not the camera is following anything at the moment.
@@ -111,10 +105,6 @@ namespace CowMouse
             buildingQueue = new Queue<Building>();
 
             makeStartingInWorldObjects();
-
-            heldButtons = new HashSet<Keys>();
-
-            this.UserMode = CowMouse.UserMode.NO_ACTION;
         }
 
         #region Starting Object Creation
@@ -289,11 +279,6 @@ namespace CowMouse
             defaultInvalidCell = new MapCell(3, 0, 0);
         }
 
-        public override void Draw(GameTime gameTime)
-        {
-            base.Draw(gameTime);
-        }
-
         protected override TileMap makeMap()
         {
             return new TileMap();
@@ -305,9 +290,6 @@ namespace CowMouse
 
             if (FollowMode)
                 Camera.CenterOnPoint(FollowTarget.xPositionDraw, FollowTarget.yPositionDraw);
-
-            MouseState ms = Mouse.GetState();
-            updateMouseActions(ms);
 
             foreach (Building building in buildings)
                 building.Update(gameTime);
@@ -336,186 +318,42 @@ namespace CowMouse
             }
         }
 
-        #region Mouse Activities
-        private bool Dragging { get; set; }
-        private ButtonState leftMouseButtonHeld { get; set; }
-        private ButtonState rightMouseButtonHeld { get; set; }
-        private Point MouseClickStartSquare { get; set; }
-        private Point MouseClickEndSquare { get; set; }
-
-        private HashSet<Keys> heldButtons;
-
-        private bool UserModeLocked = false;
-        private UserMode SavedUserMode = UserMode.NO_ACTION;
-
-        private MouseMode MouseModeOf(UserMode um)
-        {
-            switch (um)
-            {
-                case CowMouse.UserMode.MAKE_STOCKPILE:
-                case CowMouse.UserMode.MAKE_BARRIER:
-                case CowMouse.UserMode.MAKE_BEDROOM:
-                    return MouseMode.DRAG;
-
-                case CowMouse.UserMode.NO_ACTION:
-                    return MouseMode.NO_ACTION;
-
-                default:
-                    throw new NotImplementedException();
-            }
-        }
-
-        private void updateMouseActions(MouseState ms)
-        {
-            UserMode relevantUserMode = (UserModeLocked ? SavedUserMode : this.UserMode);
-
-            switch (MouseModeOf(relevantUserMode))
-            {
-                case MouseMode.DRAG:
-                    processDragMode(ms);
-                    break;
-
-                case MouseMode.NO_ACTION:
-                    //do nothing?
-                    break;
-
-                default:
-                    throw new NotImplementedException();
-            }
-
-            //save current mouse state for next frame
-            rightMouseButtonHeld = ms.RightButton;
-            leftMouseButtonHeld = ms.LeftButton;
-        }
-
-        /// <summary>
-        /// Update the dragged block, or deal with releasing
-        /// or pressing a mouse button as appropriate.
-        /// </summary>
-        /// <param name="ms"></param>
-        private void processDragMode(MouseState ms)
-        {
-            //if we changed the button, start that process
-            if (ms.LeftButton != leftMouseButtonHeld)
-            {
-                //if we just pressed the button, start dragging
-                if (ms.LeftButton == ButtonState.Pressed)
-                {
-                    Dragging = true;
-                    MouseClickStartSquare = MouseSquare;
-                    updateSelectedBlock();
-
-                    lockUserMode();
-                }
-                else //if we just let go of a button, clear everything out
-                {
-                    Dragging = false;
-                    MyMap.ClearOverrides();
-
-                    unlockUserMode();
-                }
-            }
-
-            //if we didn't change any buttons, just continue a drag, if appropriate
-            //if we're already dragging and we hit the RIGHT mouse button, that means we're saving something
-            else if (Dragging)
-            {
-                //we need to updateSelectedBlock every turn, even if we don't move the mouse;
-                //something could have happened to make this invalid
-                updateSelectedBlock();
-
-                //NEW right click means save
-                if (rightMouseButtonHeld == ButtonState.Released && ms.RightButton == ButtonState.Pressed)
-                    saveDraggedBlock();
-            }
-        }
-
-        private void unlockUserMode()
-        {
-            this.UserModeLocked = false;
-        }
-
-        private void lockUserMode()
-        {
-            this.UserModeLocked = true;
-            this.SavedUserMode = this.UserMode;
-        }
-
-        #region Making buildings code
-        private void saveDraggedBlock()
-        {
-            Dragging = false;
-
-            MyMap.ClearOverrides();
-
-            int xmin = Math.Min(MouseClickStartSquare.X, MouseClickEndSquare.X);
-            int xmax = Math.Max(MouseClickStartSquare.X, MouseClickEndSquare.X);
-
-            int ymin = Math.Min(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
-            int ymax = Math.Max(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
-
-            if (isValidSelection(xmin, xmax, ymin, ymax))
-            {
-                switch (this.UserMode)
-                {
-                    case CowMouse.UserMode.MAKE_STOCKPILE:
-                        Stockpile pile = new Stockpile(xmin, xmax, ymin, ymax, this);
-                        addBuilding(pile);
-                        break;
-
-                    case CowMouse.UserMode.MAKE_BARRIER:
-                        Barrier wall = new Barrier(xmin, xmax, ymin, ymax, this);
-                        addBuilding(wall);
-                        break;
-
-                    case CowMouse.UserMode.MAKE_BEDROOM:
-                        Bedroom bedroom = new Bedroom(xmin, xmax, ymin, ymax, this);
-                        addBuilding(bedroom);
-                        break;
-
-                    default:
-                        throw new NotImplementedException();
-                }
-            }
-        }
-
         /// <summary>
         /// Adds the specified building to the list of buildings.
         /// </summary>
         /// <param name="building"></param>
-        private void addBuilding(Building building)
+        public void addBuilding(Building building)
         {
             buildingQueue.Enqueue(building);
         }
 
         /// <summary>
-        /// This updates the part of the map that's highlighted / selected
-        /// by a mouse drag.
+        /// In the specified rectangle, set the tile overrides to the
+        /// default "valid" override cell or the default "invalid"
+        /// override cell, depending on the "valid" parameter.
+        /// 
+        /// This also clears all other override cells.
         /// </summary>
-        private void updateSelectedBlock()
+        /// <param name="xmin"></param>
+        /// <param name="ymin"></param>
+        /// <param name="xmax"></param>
+        /// <param name="ymax"></param>
+        /// <param name="valid"></param>
+        public void SetVisualOverrides(int xmin, int ymin, int xmax, int ymax, bool valid)
         {
-            MouseClickEndSquare = MouseSquare;
-
             MyMap.ClearOverrides();
 
-            int xmin = Math.Min(MouseClickStartSquare.X, MouseClickEndSquare.X);
-            int xmax = Math.Max(MouseClickStartSquare.X, MouseClickEndSquare.X);
-
-            int ymin = Math.Min(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
-            int ymax = Math.Max(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
-
-            MapCell cell;
-
-            if (isValidSelection(xmin, xmax, ymin, ymax))
-                cell = defaultHighlightCell;
+            MapCell overrideCell;
+            if (valid)
+                overrideCell = defaultHighlightCell;
             else
-                cell = defaultInvalidCell;
+                overrideCell = defaultInvalidCell;
 
             for (int x = xmin; x <= xmax; x++)
             {
                 for (int y = ymin; y <= ymax; y++)
                 {
-                    MyMap.SetOverride(cell, x, y);
+                    MyMap.SetOverride(overrideCell, x, y);
                 }
             }
         }
@@ -523,13 +361,16 @@ namespace CowMouse
         /// <summary>
         /// Determines whether the box has positive area.
         /// Also checks if this box overlaps any of the existing buildings.
+        /// If this is marked as "blockable," it will also check if there is
+        /// anything (non-building) which is blocking the current square.
         /// </summary>
         /// <param name="xmin"></param>
         /// <param name="xmax"></param>
         /// <param name="ymin"></param>
         /// <param name="ymax"></param>
+        /// <param name="isBlockedByObjects">Whether or not this should be blocked by objects.</param>
         /// <returns></returns>
-        private bool isValidSelection(int xmin, int xmax, int ymin, int ymax)
+        public bool IsValidSelection(int xmin, int xmax, int ymin, int ymax, bool isBlockedByObjects)
         {
             if (xmax < xmin)
                 return false;
@@ -544,31 +385,17 @@ namespace CowMouse
             }
 
             //If it's a non-passable object, also make sure it doesn't overlap any dudes
-            switch (UserMode)
+            if (isBlockedByObjects)
             {
-                    //these generate passable objects
-                case CowMouse.UserMode.MAKE_BEDROOM:
-                case CowMouse.UserMode.MAKE_STOCKPILE:
-                    break;
-
-                    //these do not
-                case CowMouse.UserMode.MAKE_BARRIER:
-                    foreach (InWorldObject obj in InGameObjects())
-                    {
-                        if (obj.SquareBoundingBoxTouches(xmin, ymin, xmax, ymax))
-                            return false;
-                    }
-                    break;
-
-                    //this means we forgot to implement something (oops)
-                default:
-                    throw new NotImplementedException();
+                foreach (InWorldObject obj in InGameObjects())
+                {
+                    if (obj.SquareBoundingBoxTouches(xmin, ymin, xmax, ymax))
+                        return false;
+                }
             }
 
             return true;
         }
-        #endregion
-        #endregion
 
         #region Pathing assistance
         /// <summary>
@@ -640,20 +467,5 @@ namespace CowMouse
                 yield return new Point(startX, startY + 1);
         }
         #endregion
-    }
-
-    public enum UserMode
-    {
-        NO_ACTION,
-
-        MAKE_STOCKPILE,
-        MAKE_BEDROOM,
-        MAKE_BARRIER
-    }
-
-    public enum MouseMode
-    {
-        NO_ACTION,
-        DRAG
     }
 }

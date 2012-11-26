@@ -10,6 +10,7 @@ using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using TileEngine;
 using CowMouse.UserInterface;
+using CowMouse.Buildings;
 
 namespace CowMouse
 {
@@ -52,6 +53,8 @@ namespace CowMouse
 
             keyTapBindings = new Dictionary<Keys, Action>();
             keyHoldBindings = new Dictionary<Keys, Action>();
+
+            this.UserMode = CowMouse.UserMode.NO_ACTION;
         }
 
         /// <summary>
@@ -79,45 +82,6 @@ namespace CowMouse
             setupKeyBindings();
 
             base.Initialize();
-        }
-
-
-
-        /// <summary>
-        /// Sets up the key bindings!  No more typing the same
-        /// recipe every time!
-        /// </summary>
-        private void setupKeyBindings()
-        {
-            keyTapBindings[Keys.Escape] = new Action(this.Exit);
-            keyTapBindings[Keys.M] = new Action(SideMenu.ToggleVisible);
-            keyTapBindings[Keys.F11] = new Action(this.ToggleFullScreen);
-            keyTapBindings[Keys.F12] = new Action(fpsCounter.ToggleVisible);
-
-            keyTapBindings[Keys.Q] = new Action(WorldManager.FollowPreviousNPC);
-            keyTapBindings[Keys.E] = new Action(WorldManager.FollowNextNPC);
-
-            keyHoldBindings[Keys.W] = new Action(() => KeyboardMove(0, -KeyboardMoveSpeed));
-            keyHoldBindings[Keys.A] = new Action(() => KeyboardMove(-KeyboardMoveSpeed, 0));
-            keyHoldBindings[Keys.S] = new Action(() => KeyboardMove(0, KeyboardMoveSpeed));
-            keyHoldBindings[Keys.D] = new Action(() => KeyboardMove(KeyboardMoveSpeed, 0));
-
-            keyHoldBindings[Keys.Left] = new Action(() => KeyboardMove(-KeyboardMoveSpeed, 0));
-            keyHoldBindings[Keys.Right] = new Action(() => KeyboardMove(KeyboardMoveSpeed, 0));
-            keyHoldBindings[Keys.Up] = new Action(() => KeyboardMove(0, -KeyboardMoveSpeed));
-            keyHoldBindings[Keys.Down] = new Action(() => KeyboardMove(0, KeyboardMoveSpeed));
-        }
-
-        /// <summary>
-        /// Move the Camera with respect to the specified change.
-        /// Also deselects follow mode.
-        /// </summary>
-        /// <param name="dx"></param>
-        /// <param name="dy"></param>
-        private void KeyboardMove(int dx, int dy)
-        {
-            Camera.Move(dx, dy);
-            WorldManager.Unfollow();
         }
 
         /// <summary>
@@ -191,6 +155,7 @@ namespace CowMouse
         protected override void Update(GameTime gameTime)
         {
             ProcessKeyboardInput();
+            ProcessMouseInput();
 
             base.Update(gameTime);
         }
@@ -198,24 +163,271 @@ namespace CowMouse
         #region UI_switches
         public void SetMouseMode_Stockpiles()
         {
-            WorldManager.SetUserMode(UserMode.MAKE_STOCKPILE);
+            this.UserMode = UserMode.MAKE_STOCKPILE;
         }
 
         public void SetMouseMode_Barriers()
         {
-            WorldManager.SetUserMode(UserMode.MAKE_BARRIER);
+            this.UserMode = UserMode.MAKE_BARRIER;
         }
 
         public void SetMouseMode_Bedrooms()
         {
-            WorldManager.SetUserMode(UserMode.MAKE_BEDROOM);
+            this.UserMode = UserMode.MAKE_BEDROOM;
         }
 
         public void SetMouseMode_NoAction()
         {
-            WorldManager.SetUserMode(UserMode.NO_ACTION);
+            this.UserMode = UserMode.NO_ACTION;
         }
         #endregion
+
+        #region Mouse Stuff
+        private bool Dragging { get; set; }
+        private ButtonState leftMouseButtonHeld { get; set; }
+        private ButtonState rightMouseButtonHeld { get; set; }
+        private Point MouseClickStartSquare { get; set; }
+        private Point MouseClickEndSquare { get; set; }
+
+        private bool UserModeLocked = false;
+        private UserMode SavedUserMode = UserMode.NO_ACTION;
+
+        public UserMode UserMode { get; set; }
+
+        private void ProcessMouseInput()
+        {
+            MouseState ms = Mouse.GetState();
+
+            UserMode relevantUserMode = (UserModeLocked ? SavedUserMode : this.UserMode);
+
+            switch (MouseModeOf(relevantUserMode))
+            {
+                case MouseMode.DRAG:
+                    ProcessDragMode(ms);
+                    break;
+
+                case MouseMode.NO_ACTION:
+                    //do nothing?
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+
+            //save current mouse state for next frame
+            rightMouseButtonHeld = ms.RightButton;
+            leftMouseButtonHeld = ms.LeftButton;
+        }
+
+        /// <summary>
+        /// Unlocks the usermode.
+        /// </summary>
+        private void unlockUserMode()
+        {
+            this.UserModeLocked = false;
+        }
+
+        /// <summary>
+        /// Locks the usermode.
+        /// </summary>
+        private void lockUserMode()
+        {
+            this.UserModeLocked = true;
+            this.SavedUserMode = this.UserMode;
+        }
+
+        /// <summary>
+        /// Determines which MouseMode corresponds to the
+        /// specified UserMode.
+        /// </summary>
+        /// <param name="um"></param>
+        /// <returns></returns>
+        private MouseMode MouseModeOf(UserMode um)
+        {
+            switch (um)
+            {
+                case CowMouse.UserMode.MAKE_STOCKPILE:
+                case CowMouse.UserMode.MAKE_BARRIER:
+                case CowMouse.UserMode.MAKE_BEDROOM:
+                    return MouseMode.DRAG;
+
+                case CowMouse.UserMode.NO_ACTION:
+                    return MouseMode.NO_ACTION;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        #region Dragging
+
+        /// <summary>
+        /// This updates the part of the map that's highlighted / selected
+        /// by a mouse drag.
+        /// </summary>
+        private void UpdateSelectionVisualIndicator()
+        {
+            MouseClickEndSquare = WorldManager.MouseSquare;
+
+            int xmin = Math.Min(MouseClickStartSquare.X, MouseClickEndSquare.X);
+            int xmax = Math.Max(MouseClickStartSquare.X, MouseClickEndSquare.X);
+
+            int ymin = Math.Min(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
+            int ymax = Math.Max(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
+
+            bool valid = WorldManager.IsValidSelection(xmin, xmax, ymin, ymax, IsSelectionBlockedByObjects());
+
+            WorldManager.SetVisualOverrides(xmin, ymin, xmax, ymax, valid);
+        }
+
+        /// <summary>
+        /// Update the dragged block, or deal with releasing
+        /// or pressing a mouse button as appropriate.
+        /// </summary>
+        private void ProcessDragMode(MouseState ms)
+        {
+            //if we changed the button, start that process
+            if (ms.LeftButton != leftMouseButtonHeld)
+            {
+                //if we just pressed the button, start dragging
+                if (ms.LeftButton == ButtonState.Pressed)
+                {
+                    Dragging = true;
+                    MouseClickStartSquare = WorldManager.MouseSquare;
+                    UpdateSelectionVisualIndicator();
+
+                    lockUserMode();
+                }
+                else //if we just let go of a button, clear everything out
+                {
+                    Dragging = false;
+                    WorldManager.MyMap.ClearOverrides();
+
+                    unlockUserMode();
+                }
+            }
+
+            //if we didn't change any buttons, just continue a drag, if appropriate
+            //if we're already dragging and we hit the RIGHT mouse button, that means we're saving something
+            else if (Dragging)
+            {
+                //we need to updateSelectedBlock every turn, even if we don't move the mouse;
+                //something could have happened to make this invalid
+                UpdateSelectionVisualIndicator();
+
+                //NEW right click means save
+                if (rightMouseButtonHeld == ButtonState.Released && ms.RightButton == ButtonState.Pressed)
+                    SaveDraggedBlock();
+            }
+        }
+
+        /// <summary>
+        /// Saves the selected dragged block as the relevant kind of building,
+        /// if it's a valid selection.  Adds this building to the WorldManager.
+        /// </summary>
+        private void SaveDraggedBlock()
+        {
+            Dragging = false;
+
+            WorldManager.MyMap.ClearOverrides();
+
+            int xmin = Math.Min(MouseClickStartSquare.X, MouseClickEndSquare.X);
+            int xmax = Math.Max(MouseClickStartSquare.X, MouseClickEndSquare.X);
+
+            int ymin = Math.Min(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
+            int ymax = Math.Max(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
+
+            if (WorldManager.IsValidSelection(xmin, xmax, ymin, ymax, IsSelectionBlockedByObjects()))
+            {
+                switch (this.UserMode)
+                {
+                    case CowMouse.UserMode.MAKE_STOCKPILE:
+                        Stockpile pile = new Stockpile(xmin, xmax, ymin, ymax, WorldManager);
+                        WorldManager.addBuilding(pile);
+                        break;
+
+                    case CowMouse.UserMode.MAKE_BARRIER:
+                        Barrier wall = new Barrier(xmin, xmax, ymin, ymax, WorldManager);
+                        WorldManager.addBuilding(wall);
+                        break;
+
+                    case CowMouse.UserMode.MAKE_BEDROOM:
+                        Bedroom bedroom = new Bedroom(xmin, xmax, ymin, ymax, WorldManager);
+                        WorldManager.addBuilding(bedroom);
+                        break;
+
+                    default:
+                        throw new NotImplementedException();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Determines whether the selection indicated by the UserMode
+        /// would be blocked by existing objects (if they touch it).
+        /// </summary>
+        /// <returns></returns>
+        private bool IsSelectionBlockedByObjects()
+        {
+            bool blockedByObjects;
+            switch (UserMode)
+            {
+                case CowMouse.UserMode.MAKE_BARRIER:
+                    blockedByObjects = true;
+                    break;
+
+                case CowMouse.UserMode.MAKE_BEDROOM:
+                case CowMouse.UserMode.MAKE_STOCKPILE:
+                case CowMouse.UserMode.NO_ACTION:
+                    blockedByObjects = false;
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+            return blockedByObjects;
+        }
+        #endregion
+
+        #endregion
+
+        #region Keyboard Stuff
+        /// <summary>
+        /// Sets up the key bindings!  No more typing the same
+        /// recipe every time!
+        /// </summary>
+        private void setupKeyBindings()
+        {
+            keyTapBindings[Keys.Escape] = new Action(this.Exit);
+            keyTapBindings[Keys.M] = new Action(SideMenu.ToggleVisible);
+            keyTapBindings[Keys.F11] = new Action(this.ToggleFullScreen);
+            keyTapBindings[Keys.F12] = new Action(fpsCounter.ToggleVisible);
+
+            keyTapBindings[Keys.Q] = new Action(WorldManager.FollowPreviousNPC);
+            keyTapBindings[Keys.E] = new Action(WorldManager.FollowNextNPC);
+
+            keyHoldBindings[Keys.W] = new Action(() => KeyboardMove(0, -KeyboardMoveSpeed));
+            keyHoldBindings[Keys.A] = new Action(() => KeyboardMove(-KeyboardMoveSpeed, 0));
+            keyHoldBindings[Keys.S] = new Action(() => KeyboardMove(0, KeyboardMoveSpeed));
+            keyHoldBindings[Keys.D] = new Action(() => KeyboardMove(KeyboardMoveSpeed, 0));
+
+            keyHoldBindings[Keys.Left] = new Action(() => KeyboardMove(-KeyboardMoveSpeed, 0));
+            keyHoldBindings[Keys.Right] = new Action(() => KeyboardMove(KeyboardMoveSpeed, 0));
+            keyHoldBindings[Keys.Up] = new Action(() => KeyboardMove(0, -KeyboardMoveSpeed));
+            keyHoldBindings[Keys.Down] = new Action(() => KeyboardMove(0, KeyboardMoveSpeed));
+        }
+
+        /// <summary>
+        /// Move the Camera with respect to the specified change.
+        /// Also deselects follow mode.
+        /// </summary>
+        /// <param name="dx"></param>
+        /// <param name="dy"></param>
+        private void KeyboardMove(int dx, int dy)
+        {
+            Camera.Move(dx, dy);
+            WorldManager.Unfollow();
+        }
 
         /// <summary>
         /// Mash each of the supplied key bindings.
@@ -246,6 +458,7 @@ namespace CowMouse
                 }
             }
         }
+        #endregion
 
         /// <summary>
         /// This is called when the game should draw itself.
@@ -259,5 +472,20 @@ namespace CowMouse
 
             base.Draw(gameTime);
         }
+    }
+
+    public enum UserMode
+    {
+        NO_ACTION,
+
+        MAKE_STOCKPILE,
+        MAKE_BEDROOM,
+        MAKE_BARRIER
+    }
+
+    public enum MouseMode
+    {
+        NO_ACTION,
+        DRAG
     }
 }
