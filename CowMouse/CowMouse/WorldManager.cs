@@ -58,13 +58,13 @@ namespace CowMouse
             Console.WriteLine("Setting up world ...");
 
             carryables = new Queue<Carryable>();
-            int radius = 200;
+            int radius = 40;
             makeRandomLogs(radius, -radius, radius, -radius, radius);
 
             Console.WriteLine("Logged");
 
             npcs = new Queue<TownsMan>();
-            makeRandomNPCs(30);
+            makeRandomNPCs(1);
 
             Console.WriteLine("NPCed");
         }
@@ -173,9 +173,8 @@ namespace CowMouse
         }
 
         /// <summary>
-        /// Enumerates all the stockpiles in the world.
-        /// Note that stockpiles are buildings, so this is
-        /// a subset of Buildings.
+        /// Enumerates all the internal points of all the stockpiles
+        /// in the world.
         /// </summary>
         public IEnumerable<Point> StockpilePositions
         {
@@ -184,6 +183,25 @@ namespace CowMouse
                 foreach (Building b in buildings)
                 {
                     if (b.IsStockpile)
+                    {
+                        foreach (Point p in b.InternalPoints)
+                            yield return p;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Enumerates all the internal points of all the bedrooms
+        /// in the world.
+        /// </summary>
+        public IEnumerable<Point> BedroomPositions
+        {
+            get
+            {
+                foreach (Building b in buildings)
+                {
+                    if (b.IsBedroom)
                     {
                         foreach (Point p in b.InternalPoints)
                             yield return p;
@@ -230,21 +248,29 @@ namespace CowMouse
             updateMouseActions(ms);
 
             foreach (Building building in buildings)
-                building.Update();
+                building.Update(gameTime);
 
             if (buildingQueue.Count > 0)
             {
                 SortedSet<Building> newBuildings = new SortedSet<Building>();
 
+                bool newWalls = false;
+
                 foreach (Building b in buildings)
+                {
                     newBuildings.Add(b);
+                    if (!b.Passable)
+                        newWalls = true;
+                }
 
                 foreach (Building b in buildingQueue)
                     newBuildings.Add(b);
 
                 buildingQueue.Clear();
                 this.buildings = newBuildings;
-                this.UpdatePassability(gameTime);
+
+                if (newWalls)
+                    this.PassabilityMadeHarder(gameTime);
             }
         }
 
@@ -264,11 +290,12 @@ namespace CowMouse
         {
             switch (um)
             {
-                case UserMode.MAKE_STOCKPILE:
+                case CowMouse.UserMode.MAKE_STOCKPILE:
                 case CowMouse.UserMode.MAKE_BARRIER:
+                case CowMouse.UserMode.MAKE_BEDROOM:
                     return MouseMode.DRAG;
 
-                case UserMode.NO_ACTION:
+                case CowMouse.UserMode.NO_ACTION:
                     return MouseMode.NO_ACTION;
 
                 default:
@@ -368,14 +395,19 @@ namespace CowMouse
             {
                 switch (this.UserMode)
                 {
-                    case UserMode.MAKE_STOCKPILE:
-                        Stockpile pile = new Stockpile(xmin, xmax, ymin, ymax, MyMap);
+                    case CowMouse.UserMode.MAKE_STOCKPILE:
+                        Stockpile pile = new Stockpile(xmin, xmax, ymin, ymax, this);
                         addBuilding(pile);
                         break;
 
                     case CowMouse.UserMode.MAKE_BARRIER:
-                        Barrier wall = new Barrier(xmin, xmax, ymin, ymax, MyMap);
+                        Barrier wall = new Barrier(xmin, xmax, ymin, ymax, this);
                         addBuilding(wall);
+                        break;
+
+                    case CowMouse.UserMode.MAKE_BEDROOM:
+                        Bedroom bedroom = new Bedroom(xmin, xmax, ymin, ymax, this);
+                        addBuilding(bedroom);
                         break;
 
                     default:
@@ -547,6 +579,7 @@ namespace CowMouse
         NO_ACTION,
 
         MAKE_STOCKPILE,
+        MAKE_BEDROOM,
         MAKE_BARRIER
     }
 

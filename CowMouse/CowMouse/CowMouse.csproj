@@ -112,6 +112,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Buildings\Barrier.cs" />
+    <Compile Include="Buildings\Bedroom.cs" />
     <Compile Include="Buildings\Building.cs" />
     <Compile Include="Buildings\Stockpile.cs" />
     <Compile Include="InGameObjects\Carryable.cs" />

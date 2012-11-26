@@ -63,6 +63,7 @@ namespace CowMouse.UserInterface
 
             addButton(new Action(Game.SetMouseMode_Stockpiles), "Pile");
             addButton(new Action(Game.SetMouseMode_Barriers), "Wall");
+            addButton(new Action(Game.SetMouseMode_Bedrooms), "Bedroom");
 
             addButton(new Action(Game.SetMouseMode_NoAction), "(Clear)");
         }

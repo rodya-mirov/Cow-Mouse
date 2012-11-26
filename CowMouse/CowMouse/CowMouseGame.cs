@@ -175,6 +175,11 @@ namespace CowMouse
             WorldManager.SetUserMode(UserMode.MAKE_BARRIER);
         }
 
+        public void SetMouseMode_Bedrooms()
+        {
+            WorldManager.SetUserMode(UserMode.MAKE_BEDROOM);
+        }
+
         public void SetMouseMode_NoAction()
         {
             WorldManager.SetUserMode(UserMode.NO_ACTION);

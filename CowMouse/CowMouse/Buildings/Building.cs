@@ -16,11 +16,13 @@ namespace CowMouse.Buildings
     /// </summary>
     public abstract class Building : IComparable<Building>
     {
-        public int XMin { get; private set; }
-        public int YMin { get; private set; }
+        public int XMin { get; protected set; }
+        public int YMin { get; protected set; }
 
-        public int XMax { get; private set; }
-        public int YMax { get; private set; }
+        public int XMax { get; protected set; }
+        public int YMax { get; protected set; }
+
+        public WorldManager WorldManager { get; protected set; }
 
         /// <summary>
         /// Determines the distance from this building to the
@@ -51,16 +53,19 @@ namespace CowMouse.Buildings
 
         #region Tags
         public abstract bool Passable { get; }
-        public abstract bool IsStockpile { get; }
+        public virtual bool IsStockpile { get { return false; } }
+        public virtual bool IsBedroom { get { return false; } }
         #endregion
 
-        public Building(int xMin, int xMax, int yMin, int yMax)
+        public Building(int xMin, int xMax, int yMin, int yMax, WorldManager manager)
         {
             this.XMin = xMin;
             this.XMax = xMax;
 
             this.YMin = yMin;
             this.YMax = yMax;
+
+            this.WorldManager = manager;
         }
 
         /// <summary>
@@ -135,7 +140,14 @@ namespace CowMouse.Buildings
                 return this.YMax - b.YMax;
         }
 
-        public abstract void Update();
+        /// <summary>
+        /// Update method is called every turn; the base Update
+        /// does nothing, but can be extended.
+        /// </summary>
+        public virtual void Update(GameTime gameTime)
+        {
+            //does nothing
+        }
 
         /// <summary>
         /// Returns an enumeration of the points inside this

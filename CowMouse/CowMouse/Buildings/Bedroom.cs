@@ -6,18 +6,15 @@ using TileEngine;
 
 namespace CowMouse.Buildings
 {
-    /// <summary>
-    /// This is pretty much a damn stockpile.  You can pile stock on it.
-    /// </summary>
-    public class Stockpile : Building
+    public class Bedroom : Building
     {
         #region Tags
         public override bool Passable { get { return true; } }
-        public override bool IsStockpile { get { return true; } }
+        public override bool IsBedroom { get { return true; } }
         #endregion
 
-        public Stockpile(int xmin, int xmax, int ymin, int ymax, WorldManager manager)
-            : base(xmin, xmax, ymin, ymax, manager)
+        public Bedroom(int xMin, int xMax, int yMin, int yMax, WorldManager manager)
+            : base(xMin, xMax, yMin, yMax, manager)
         {
             addFloors();
         }
@@ -25,13 +22,13 @@ namespace CowMouse.Buildings
         private void addFloors()
         {
             TileMap map = WorldManager.MyMap;
-            MapCell floorCell = new MapCell(10, 0, 0);
+            MapCell cell = new MapCell(1, 0, 0);
 
             for (int x = XMin; x <= XMax; x++)
             {
                 for (int y = YMin; y <= YMax; y++)
                 {
-                    map.AddConstructedCell(floorCell, x, y);
+                    map.AddConstructedCell(cell, x, y);
                 }
             }
         }
