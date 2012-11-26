@@ -38,9 +38,20 @@ namespace CowMouse
         }
 
         #region Camera Following NPC
+        /// <summary>
+        /// Whether or not the camera is following anything at the moment.
+        /// </summary>
         public bool FollowMode { get; private set; }
+
+        /// <summary>
+        /// If FollowMode is on, this is the target of that following.
+        /// </summary>
         public Person FollowTarget { get; private set; }
 
+        /// <summary>
+        /// Sets FollowMode to true, and targets the next thing in the queue.
+        /// Does nothing if there are no NPCs.
+        /// </summary>
         public void FollowNextNPC()
         {
             if (npcs.Count > 0)
@@ -58,6 +69,10 @@ namespace CowMouse
             }
         }
 
+        /// <summary>
+        /// Sets FollowMode to true, and targets the previous thing in the queue.
+        /// Does nothing if there are no NPCs.
+        /// </summary>
         public void FollowPreviousNPC()
         {
             if (npcs.Count > 0)
@@ -77,6 +92,9 @@ namespace CowMouse
             }
         }
 
+        /// <summary>
+        /// Sets FollowMode to false and clears FollowTarget.
+        /// </summary>
         public void Unfollow()
         {
             FollowMode = false;
