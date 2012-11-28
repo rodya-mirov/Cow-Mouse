@@ -72,11 +72,20 @@ namespace CowMouse.NPCs
             currentEnergy = ran.Next(sleepUntil);
         }
 
+        #region Inhabitation
+        public override void Inhabit()
+        {
+            base.Inhabit();
+            if (IsCarryingItem)
+                putDownItem();
+        }
+
         public override void Release()
         {
             base.Release();
             changeMentalStateTo(AIState.Undecided);
         }
+        #endregion
 
         /// <summary>
         /// The tint to paint the sprite.  Used primarily to show the mood
@@ -356,6 +365,8 @@ namespace CowMouse.NPCs
         /// <param name="newState"></param>
         private void changeMentalStateTo(AIState newState)
         {
+            QueuedDestinations.Clear();
+
             AIState oldState = mentalState;
             mentalState = newState;
 

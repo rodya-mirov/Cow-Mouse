@@ -73,8 +73,8 @@ namespace CowMouse.NPCs
 
             if (usingTileCoordinates)
             {
-                this.xPos = xCoordinate * Tile.TileInGameWidth;
-                this.yPos = yCoordinate * Tile.TileInGameHeight;
+                this.xPos = xCoordinate * Tile.TileInGameWidth + Tile.TileInGameWidthHalf;
+                this.yPos = yCoordinate * Tile.TileInGameHeight + Tile.TileInGameHeightHalf;
             }
             else
             {
