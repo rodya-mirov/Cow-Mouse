@@ -11,6 +11,8 @@ using Microsoft.Xna.Framework.Media;
 using TileEngine;
 using CowMouse.UserInterface;
 using CowMouse.Buildings;
+using CowMouse.Utilities;
+using CowMouse.NPCs;
 
 namespace CowMouse
 {
@@ -41,6 +43,91 @@ namespace CowMouse
         //scrollin
         private int KeyboardMoveSpeed = 2;
 
+        #region Game Mode
+        private GameMode gameMode;
+
+        /// <summary>
+        /// The current GameMode we're playing in.
+        /// </summary>
+        public GameMode GameMode
+        {
+            get
+            {
+                return gameMode;
+            }
+
+            set
+            {
+                if (gameMode == value)
+                    return;
+
+                gameMode = value;
+                switch (gameMode)
+                {
+                    case CowMouse.GameMode.ADVENTURE:
+                        SideMenu.Visible = false;
+                        break;
+
+                    case CowMouse.GameMode.TOWN:
+                        SideMenu.Visible = true;
+                        break;
+
+                    default:
+                        throw new NotImplementedException();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Inhabits the followtarget, if one exists and we're in Town mode.
+        /// Otherwise does nothing.
+        /// </summary>
+        private void InhabitFollowedNPC()
+        {
+            switch(GameMode)
+            {
+                case CowMouse.GameMode.TOWN:
+                    if (WorldManager.FollowMode && WorldManager.FollowTarget != null)
+                    {
+                        GameMode = CowMouse.GameMode.ADVENTURE;
+                        WorldManager.FollowTarget.Inhabit();
+                    }
+                    break;
+
+                case CowMouse.GameMode.ADVENTURE:
+                    //do nothing
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        /// <summary>
+        /// Releases the followtarget, if one exists and we're in Adventure mode.
+        /// Otherwise does nothing.
+        /// </summary>
+        private void ReleaseFollowedNPC()
+        {
+            switch (GameMode)
+            {
+                case CowMouse.GameMode.ADVENTURE:
+                    if (WorldManager.FollowMode && WorldManager.FollowTarget != null)
+                    {
+                        GameMode = CowMouse.GameMode.TOWN;
+                        WorldManager.FollowTarget.Release();
+                    }
+                    break;
+
+                case CowMouse.GameMode.TOWN:
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+        #endregion
+
         public CowMouseGame()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -54,7 +141,7 @@ namespace CowMouse
             keyTapBindings = new Dictionary<Keys, Action>();
             keyHoldBindings = new Dictionary<Keys, Action>();
 
-            this.UserMode = CowMouse.UserMode.NO_ACTION;
+            this.UserMode = CowMouse.UserMouseMode.NO_ACTION;
         }
 
         /// <summary>
@@ -65,6 +152,9 @@ namespace CowMouse
         /// </summary>
         protected override void Initialize()
         {
+            Tile.TileVisualOffsetX = 0;
+            Tile.TileVisualOffsetY = 48;
+
             WorldManager manager = new WorldManager(this);
             DrawComponent = new CowMouseComponent(this, manager);
             DrawComponent.Enabled = true;
@@ -154,8 +244,12 @@ namespace CowMouse
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
+            ClearMovementDirections();
+
             ProcessKeyboardInput();
             ProcessMouseInput();
+
+            DoCameraMovement();
 
             base.Update(gameTime);
         }
@@ -163,22 +257,22 @@ namespace CowMouse
         #region UI_switches
         public void SetMouseMode_Stockpiles()
         {
-            this.UserMode = UserMode.MAKE_STOCKPILE;
+            this.UserMode = UserMouseMode.MAKE_STOCKPILE;
         }
 
         public void SetMouseMode_Barriers()
         {
-            this.UserMode = UserMode.MAKE_BARRIER;
+            this.UserMode = UserMouseMode.MAKE_BARRIER;
         }
 
         public void SetMouseMode_Bedrooms()
         {
-            this.UserMode = UserMode.MAKE_BEDROOM;
+            this.UserMode = UserMouseMode.MAKE_BEDROOM;
         }
 
         public void SetMouseMode_NoAction()
         {
-            this.UserMode = UserMode.NO_ACTION;
+            this.UserMode = UserMouseMode.NO_ACTION;
         }
         #endregion
 
@@ -190,23 +284,23 @@ namespace CowMouse
         private Point MouseClickEndSquare { get; set; }
 
         private bool UserModeLocked = false;
-        private UserMode SavedUserMode = UserMode.NO_ACTION;
+        private UserMouseMode SavedUserMode = UserMouseMode.NO_ACTION;
 
-        public UserMode UserMode { get; set; }
+        public UserMouseMode UserMode { get; set; }
 
         private void ProcessMouseInput()
         {
             MouseState ms = Mouse.GetState();
 
-            UserMode relevantUserMode = (UserModeLocked ? SavedUserMode : this.UserMode);
+            UserMouseMode relevantUserMode = (UserModeLocked ? SavedUserMode : this.UserMode);
 
             switch (MouseModeOf(relevantUserMode))
             {
-                case MouseMode.DRAG:
+                case MouseAction.DRAG:
                     ProcessDragMode(ms);
                     break;
 
-                case MouseMode.NO_ACTION:
+                case MouseAction.NO_ACTION:
                     //do nothing?
                     break;
 
@@ -242,17 +336,17 @@ namespace CowMouse
         /// </summary>
         /// <param name="um"></param>
         /// <returns></returns>
-        private MouseMode MouseModeOf(UserMode um)
+        private MouseAction MouseModeOf(UserMouseMode um)
         {
             switch (um)
             {
-                case CowMouse.UserMode.MAKE_STOCKPILE:
-                case CowMouse.UserMode.MAKE_BARRIER:
-                case CowMouse.UserMode.MAKE_BEDROOM:
-                    return MouseMode.DRAG;
+                case CowMouse.UserMouseMode.MAKE_STOCKPILE:
+                case CowMouse.UserMouseMode.MAKE_BARRIER:
+                case CowMouse.UserMouseMode.MAKE_BEDROOM:
+                    return MouseAction.DRAG;
 
-                case CowMouse.UserMode.NO_ACTION:
-                    return MouseMode.NO_ACTION;
+                case CowMouse.UserMouseMode.NO_ACTION:
+                    return MouseAction.NO_ACTION;
 
                 default:
                     throw new NotImplementedException();
@@ -341,17 +435,17 @@ namespace CowMouse
             {
                 switch (this.UserMode)
                 {
-                    case CowMouse.UserMode.MAKE_STOCKPILE:
+                    case CowMouse.UserMouseMode.MAKE_STOCKPILE:
                         Stockpile pile = new Stockpile(xmin, xmax, ymin, ymax, WorldManager);
                         WorldManager.addBuilding(pile);
                         break;
 
-                    case CowMouse.UserMode.MAKE_BARRIER:
+                    case CowMouse.UserMouseMode.MAKE_BARRIER:
                         Barrier wall = new Barrier(xmin, xmax, ymin, ymax, WorldManager);
                         WorldManager.addBuilding(wall);
                         break;
 
-                    case CowMouse.UserMode.MAKE_BEDROOM:
+                    case CowMouse.UserMouseMode.MAKE_BEDROOM:
                         Bedroom bedroom = new Bedroom(xmin, xmax, ymin, ymax, WorldManager);
                         WorldManager.addBuilding(bedroom);
                         break;
@@ -372,13 +466,13 @@ namespace CowMouse
             bool blockedByObjects;
             switch (UserMode)
             {
-                case CowMouse.UserMode.MAKE_BARRIER:
+                case CowMouse.UserMouseMode.MAKE_BARRIER:
                     blockedByObjects = true;
                     break;
 
-                case CowMouse.UserMode.MAKE_BEDROOM:
-                case CowMouse.UserMode.MAKE_STOCKPILE:
-                case CowMouse.UserMode.NO_ACTION:
+                case CowMouse.UserMouseMode.MAKE_BEDROOM:
+                case CowMouse.UserMouseMode.MAKE_STOCKPILE:
+                case CowMouse.UserMouseMode.NO_ACTION:
                     blockedByObjects = false;
                     break;
 
@@ -403,31 +497,153 @@ namespace CowMouse
             keyTapBindings[Keys.F11] = new Action(this.ToggleFullScreen);
             keyTapBindings[Keys.F12] = new Action(fpsCounter.ToggleVisible);
 
-            keyTapBindings[Keys.Q] = new Action(WorldManager.FollowPreviousNPC);
-            keyTapBindings[Keys.E] = new Action(WorldManager.FollowNextNPC);
+            keyTapBindings[Keys.Q] = new Action(FollowPreviousNPC);
+            keyTapBindings[Keys.E] = new Action(FollowNextNPC);
 
-            keyHoldBindings[Keys.W] = new Action(() => KeyboardMove(0, -KeyboardMoveSpeed));
-            keyHoldBindings[Keys.A] = new Action(() => KeyboardMove(-KeyboardMoveSpeed, 0));
-            keyHoldBindings[Keys.S] = new Action(() => KeyboardMove(0, KeyboardMoveSpeed));
-            keyHoldBindings[Keys.D] = new Action(() => KeyboardMove(KeyboardMoveSpeed, 0));
+            keyTapBindings[Keys.Enter] = new Action(InhabitFollowedNPC);
+            keyTapBindings[Keys.Back] = new Action(ReleaseFollowedNPC);
 
-            keyHoldBindings[Keys.Left] = new Action(() => KeyboardMove(-KeyboardMoveSpeed, 0));
-            keyHoldBindings[Keys.Right] = new Action(() => KeyboardMove(KeyboardMoveSpeed, 0));
-            keyHoldBindings[Keys.Up] = new Action(() => KeyboardMove(0, -KeyboardMoveSpeed));
-            keyHoldBindings[Keys.Down] = new Action(() => KeyboardMove(0, KeyboardMoveSpeed));
+            keyTapBindings[Keys.Delete] = new Action(BreakpointDoesNothing);
+
+            keyHoldBindings[Keys.A] = new Action(() => SetDirectionalMovement(HorizontalDirection.LEFT));
+            keyHoldBindings[Keys.W] = new Action(() => SetDirectionalMovement(VerticalDirection.UP));
+            keyHoldBindings[Keys.S] = new Action(() => SetDirectionalMovement(VerticalDirection.DOWN));
+            keyHoldBindings[Keys.D] = new Action(() => SetDirectionalMovement(HorizontalDirection.RIGHT));
+
+            keyHoldBindings[Keys.Left] = new Action(() => SetDirectionalMovement(HorizontalDirection.LEFT));
+            keyHoldBindings[Keys.Right] = new Action(() => SetDirectionalMovement(HorizontalDirection.RIGHT));
+            keyHoldBindings[Keys.Up] = new Action(() => SetDirectionalMovement(VerticalDirection.UP));
+            keyHoldBindings[Keys.Down] = new Action(() => SetDirectionalMovement(VerticalDirection.DOWN));
         }
+
+        private void BreakpointDoesNothing()
+        {
+            Person ofInterest = WorldManager.FollowTarget;
+
+            Point pixelPoint = new Point(ofInterest.xPositionWorld, ofInterest.yPositionWorld);
+            Point SquareCoordinate = ofInterest.SquareCoordinate;
+            Rectangle pixelBox = ofInterest.InWorldPixelBoundingBox;
+            Rectangle squareBox = ofInterest.InWorldSquareBoundingBox;
+
+            if (true)
+            {
+            }
+        }
+
+        #region Keyboard Movement
+        private VerticalDirection VerticalMovementDirection;
+        private HorizontalDirection HorizontalMovementDirection;
 
         /// <summary>
-        /// Move the Camera with respect to the specified change.
-        /// Also deselects follow mode.
+        /// No longer moving :)
         /// </summary>
-        /// <param name="dx"></param>
-        /// <param name="dy"></param>
-        private void KeyboardMove(int dx, int dy)
+        private void ClearMovementDirections()
         {
-            Camera.Move(dx, dy);
-            WorldManager.Unfollow();
+            switch (GameMode)
+            {
+                case CowMouse.GameMode.ADVENTURE:
+                    WorldManager.FollowTarget.ClearDirectionalMovement();
+                    break;
+
+                case CowMouse.GameMode.TOWN:
+                    this.VerticalMovementDirection = VerticalDirection.NEUTRAL;
+                    this.HorizontalMovementDirection = HorizontalDirection.NEUTRAL;
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
         }
+
+        private void SetDirectionalMovement(HorizontalDirection h)
+        {
+            switch (GameMode)
+            {
+                case CowMouse.GameMode.TOWN:
+                    this.HorizontalMovementDirection = h;
+                    break;
+
+                case CowMouse.GameMode.ADVENTURE:
+                    WorldManager.FollowTarget.SetDirectionalMovement(h);
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        private void SetDirectionalMovement(VerticalDirection v)
+        {
+            switch (GameMode)
+            {
+                case CowMouse.GameMode.TOWN:
+                    this.VerticalMovementDirection = v;
+                    break;
+
+                case CowMouse.GameMode.ADVENTURE:
+                    WorldManager.FollowTarget.SetDirectionalMovement(v);
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        private void DoCameraMovement()
+        {
+            switch (GameMode)
+            {
+                case CowMouse.GameMode.ADVENTURE:
+                    break;
+
+                case CowMouse.GameMode.TOWN:
+                    if (Math.Abs((int)this.HorizontalMovementDirection) + Math.Abs((int)this.VerticalMovementDirection) > 0)
+                        WorldManager.Unfollow();
+
+                    Camera.Move(KeyboardMoveSpeed * (int)HorizontalMovementDirection, KeyboardMoveSpeed * (int)VerticalMovementDirection);
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+        #endregion
+
+        #region Following
+        private void FollowNextNPC()
+        {
+            switch (GameMode)
+            {
+                case CowMouse.GameMode.ADVENTURE:
+                    //do nothing
+                    break;
+
+                case CowMouse.GameMode.TOWN:
+                    WorldManager.FollowNextNPC();
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        private void FollowPreviousNPC()
+        {
+            switch (GameMode)
+            {
+                case CowMouse.GameMode.ADVENTURE:
+                    //do nothing
+                    break;
+
+                case CowMouse.GameMode.TOWN:
+                    WorldManager.FollowPreviousNPC();
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+        #endregion
 
         /// <summary>
         /// Mash each of the supplied key bindings.
@@ -474,7 +690,13 @@ namespace CowMouse
         }
     }
 
-    public enum UserMode
+    public enum GameMode
+    {
+        TOWN,
+        ADVENTURE
+    }
+
+    public enum UserMouseMode
     {
         NO_ACTION,
 
@@ -483,7 +705,7 @@ namespace CowMouse
         MAKE_BARRIER
     }
 
-    public enum MouseMode
+    public enum MouseAction
     {
         NO_ACTION,
         DRAG

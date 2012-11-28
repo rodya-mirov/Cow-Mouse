@@ -29,6 +29,9 @@ namespace CowMouse
         private Queue<Person> npcs;
         private Queue<Carryable> carryables;
 
+        private Queue<DebugPixel> pixels;
+        private bool visualDebugMode = false;
+
         public new CowMouseGame game { get; set; }
 
         #region Camera Following NPC
@@ -119,9 +122,19 @@ namespace CowMouse
             Console.WriteLine("Logged");
 
             npcs = new Queue<Person>();
+            pixels = new Queue<DebugPixel>();
             makeRandomNPCs(5);
 
             Console.WriteLine("NPCed");
+
+            if (visualDebugMode)
+            {
+                foreach (NPC npc in npcs)
+                {
+                    foreach (DebugPixel p in npc.BoundingPixels(game))
+                        pixels.Enqueue(p);
+                }
+            }
         }
 
         private void makeRandomNPCs(int numPeople)
@@ -192,6 +205,9 @@ namespace CowMouse
 
             foreach (NPC obj in npcs)
                 yield return obj;
+
+            foreach (DebugPixel p in pixels)
+                yield return p;
         }
 
         #region Enumerators and Accessors
@@ -315,6 +331,15 @@ namespace CowMouse
 
                 if (newWalls)
                     this.PassabilityMadeHarder(gameTime);
+            }
+
+            if (visualDebugMode)
+            {
+                MyMap.ClearOverrides();
+                foreach (NPC npc in npcs)
+                {
+                    npc.OverrideTouchedSquares(defaultHighlightCell, this);
+                }
             }
         }
 

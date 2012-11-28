@@ -118,6 +118,7 @@
     <Compile Include="InGameObjects\Carryable.cs" />
     <Compile Include="InGameObjects\InWorldObject.cs" />
     <Compile Include="InGameObjects\Log.cs" />
+    <Compile Include="InGameObjects\DebugPixel.cs" />
     <Compile Include="NPCs\NPC.cs" />
     <Compile Include="NPCs\Person.cs" />
     <Compile Include="UserInterface\SideMenu.cs" />
@@ -126,6 +127,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="CowMouseGame.cs" />
     <Compile Include="UserInterface\SideMenuButton.cs" />
+    <Compile Include="Utilities\Direction.cs" />
     <Compile Include="WorldManager.cs" />
   </ItemGroup>
   <ItemGroup>

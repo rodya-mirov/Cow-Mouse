@@ -6,6 +6,7 @@ using TileEngine;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using CowMouse.InGameObjects;
+using CowMouse.Utilities;
 
 namespace CowMouse.NPCs
 {
@@ -23,9 +24,40 @@ namespace CowMouse.NPCs
         protected static Texture2D townsManTexture { get; set; }
         protected const string townsManTexturePath = @"Images\NPCs\TownsMan";
 
+        private const int xDrawOffset = 31; //the true center of this thing is about 31 pixels right of xPos
+        private const int yDrawOffset = 49; //the true center of this thing is about 49 pixels down of yPos
+
         protected static Rectangle[] sources;
 
         protected int sourceIndex = 0;
+
+        #region Habitation
+        /// <summary>
+        /// Whether or not the Player is inhabiting this
+        /// NPC at this time.
+        /// </summary>
+        public bool IsInhabited
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// Sets IsInhabited to true.
+        /// </summary>
+        public virtual void Inhabit()
+        {
+            this.IsInhabited = true;
+        }
+
+        /// <summary>
+        /// Sets IsInhabited to false.
+        /// </summary>
+        public virtual void Release()
+        {
+            this.IsInhabited = false;
+        }
+        #endregion
 
         /// <summary>
         /// 
@@ -56,6 +88,186 @@ namespace CowMouse.NPCs
             this.HasDestination = false;
         }
 
+        protected GameTime lastUpdateTime;
+
+        public override sealed void Update(GameTime time)
+        {
+            this.lastUpdateTime = time;
+
+            if (IsInhabited)
+            {
+                playerUpdate();
+            }
+            else
+            {
+                aiUpdate();
+            }
+        }
+
+        #region Player controls
+        /// <summary>
+        /// The general update method when this NPC is being
+        /// controlled by the Player.
+        /// </summary>
+        protected void playerUpdate()
+        {
+            DoPlayerMovement();
+        }
+
+        #region Player movement
+        protected HorizontalDirection Player_ViewHDirection;
+        protected VerticalDirection Player_ViewVDirection;
+
+        protected HorizontalDirection Player_WorldHDirection;
+        protected VerticalDirection Player_WorldVDirection;
+
+        public void ClearDirectionalMovement()
+        {
+            Player_ViewHDirection = HorizontalDirection.NEUTRAL;
+            Player_ViewVDirection = VerticalDirection.NEUTRAL;
+
+            FixWorldDirection();
+        }
+
+        public void SetDirectionalMovement(HorizontalDirection h)
+        {
+            if (h != Player_ViewHDirection)
+            {
+                Player_ViewHDirection = h;
+                FixWorldDirection();
+            }
+        }
+
+        public void SetDirectionalMovement(VerticalDirection v)
+        {
+            if (v != Player_ViewVDirection)
+            {
+                Player_ViewVDirection = v;
+                FixWorldDirection();
+            }
+        }
+
+        /// <summary>
+        /// Massively gross nested switch statement to turn a 2D
+        /// view direction into a 2D world direction.
+        /// </summary>
+        private void FixWorldDirection()
+        {
+            switch (Player_ViewHDirection)
+            {
+                case HorizontalDirection.LEFT:
+                    switch (Player_ViewVDirection)
+                    {
+                        case VerticalDirection.DOWN:
+                            Player_WorldHDirection = HorizontalDirection.NEUTRAL;
+                            Player_WorldVDirection = VerticalDirection.UP;
+                            break;
+
+                        case VerticalDirection.NEUTRAL:
+                            Player_WorldHDirection = HorizontalDirection.LEFT;
+                            Player_WorldVDirection = VerticalDirection.UP;
+                            break;
+
+                        case VerticalDirection.UP:
+                            Player_WorldHDirection = HorizontalDirection.LEFT;
+                            Player_WorldVDirection = VerticalDirection.NEUTRAL;
+                            break;
+
+                        default:
+                            throw new NotImplementedException();
+                    }
+                    break;
+
+                case HorizontalDirection.NEUTRAL:
+                    switch (Player_ViewVDirection)
+                    {
+                        case VerticalDirection.DOWN:
+                            Player_WorldHDirection = HorizontalDirection.RIGHT;
+                            Player_WorldVDirection = VerticalDirection.UP;
+                            break;
+
+                        case VerticalDirection.NEUTRAL:
+                            Player_WorldHDirection = HorizontalDirection.NEUTRAL;
+                            Player_WorldVDirection = VerticalDirection.NEUTRAL;
+                            break;
+
+                        case VerticalDirection.UP:
+                            Player_WorldHDirection = HorizontalDirection.LEFT;
+                            Player_WorldVDirection = VerticalDirection.DOWN;
+                            break;
+
+                        default:
+                            throw new NotImplementedException();
+                    }
+                    break;
+
+                case HorizontalDirection.RIGHT:
+                    switch (Player_ViewVDirection)
+                    {
+                        case VerticalDirection.DOWN:
+                            Player_WorldHDirection = HorizontalDirection.RIGHT;
+                            Player_WorldVDirection = VerticalDirection.NEUTRAL;
+                            break;
+
+                        case VerticalDirection.NEUTRAL:
+                            Player_WorldHDirection = HorizontalDirection.RIGHT;
+                            Player_WorldVDirection = VerticalDirection.DOWN;
+                            break;
+
+                        case VerticalDirection.UP:
+                            Player_WorldHDirection = HorizontalDirection.NEUTRAL;
+                            Player_WorldVDirection = VerticalDirection.DOWN;
+                            break;
+
+                        default:
+                            throw new NotImplementedException();
+                    }
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+
+            if (Player_ViewHDirection != HorizontalDirection.NEUTRAL || Player_ViewVDirection != VerticalDirection.NEUTRAL)
+            {
+            }
+        }
+
+        private int PlayerKeyboardMovementSpeedStraight = 3;
+        private int PlayerKeyboardMovementSpeedDiagonal = 2;
+
+        /// <summary>
+        /// Process player movement
+        /// </summary>
+        protected void DoPlayerMovement()
+        {
+            int speed;
+
+            if (Player_WorldHDirection != HorizontalDirection.NEUTRAL && Player_WorldVDirection != VerticalDirection.NEUTRAL)
+                speed = PlayerKeyboardMovementSpeedDiagonal;
+            else
+                speed = PlayerKeyboardMovementSpeedStraight;
+
+            for (int x = 0; x < speed; x++)
+            {
+                xPos += (int)Player_WorldHDirection;
+                yPos += (int)Player_WorldVDirection;
+            }
+        }
+        #endregion
+        #endregion
+
+        /// <summary>
+        /// This is the main method that extensions will have to override.
+        /// This is what the Person will do when left to its own devices.
+        /// </summary>
+        protected abstract void aiUpdate();
+
+        #region Drawing
+        /// <summary>
+        /// Load all the textures
+        /// </summary>
+        /// <param name="game"></param>
         public static void LoadContent(Game game)
         {
             if (townsManTexture == null)
@@ -75,6 +287,9 @@ namespace CowMouse.NPCs
         public override int xPositionWorld { get { return xPos; } }
         public override int yPositionWorld { get { return yPos; } }
 
+        public override int VisualOffsetX { get { return 32; } }
+        public override int VisualOffsetY { get { return 48; } }
+
         protected const int halfWidth = 10;
         protected const int width = halfWidth * 2;
         protected const int halfHeight = 10;
@@ -87,12 +302,19 @@ namespace CowMouse.NPCs
                 return new Rectangle(
                     xPos - halfWidth,
                     yPos - halfHeight,
-                    width,
-                    height
+                    width + 1,
+                    height + 1
                     );
             }
         }
 
+        public override Texture2D Texture
+        {
+            get { return townsManTexture; }
+        }
+        #endregion
+
+        #region Path following
         protected bool HasDestination;
         protected Point CurrentDestination;
         protected Queue<Point> QueuedDestinations;
@@ -113,33 +335,31 @@ namespace CowMouse.NPCs
         {
             int speed = 1;
 
-            if (CurrentDestination.X < xPositionWorld)
+            for (int n = 0; n < speed; n++)
             {
-                sourceIndex = 2;
-                xPos -= speed;
-            }
-            else if (CurrentDestination.X > xPositionWorld)
-            {
-                sourceIndex = 1;
-                xPos += speed;
-            }
-            else if (CurrentDestination.Y < yPositionWorld)
-            {
-                sourceIndex = 0;
-                yPos -= speed;
-            }
-            else if (CurrentDestination.Y > yPositionWorld)
-            {
-                sourceIndex = 3;
-                yPos += speed;
+                if (CurrentDestination.X < xPositionWorld)
+                {
+                    sourceIndex = 2;
+                    xPos--;
+                }
+                else if (CurrentDestination.X > xPositionWorld)
+                {
+                    sourceIndex = 1;
+                    xPos++;
+                }
+                else if (CurrentDestination.Y < yPositionWorld)
+                {
+                    sourceIndex = 0;
+                    yPos--;
+                }
+                else if (CurrentDestination.Y > yPositionWorld)
+                {
+                    sourceIndex = 3;
+                    yPos++;
+                }
             }
 
             HasDestination = (CurrentDestination.X != xPositionWorld || CurrentDestination.Y != yPositionWorld);
-        }
-
-        public override Texture2D Texture
-        {
-            get { return townsManTexture; }
         }
 
         /// <summary>
@@ -163,5 +383,6 @@ namespace CowMouse.NPCs
         {
             SetDestination(tilePoint.X, tilePoint.Y);
         }
+        #endregion
     }
 }

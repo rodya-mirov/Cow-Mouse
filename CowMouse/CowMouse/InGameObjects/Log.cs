@@ -14,6 +14,7 @@ namespace CowMouse.InGameObjects
         protected CowMouseGame Game { get; set; }
         protected int xPos { get; set; }
         protected int yPos { get; set; }
+
         protected TileMap Map { get; set; }
 
         #region Carrying business
@@ -160,9 +161,9 @@ namespace CowMouse.InGameObjects
         public override int xPositionWorld { get { return xPos; } }
         public override int yPositionWorld { get { return yPos; } }
 
-        protected const int halfWidth = 10;
+        protected const int halfWidth = 5;
         protected const int width = halfWidth * 2;
-        protected const int halfHeight = 10;
+        protected const int halfHeight = 5;
         protected const int height = halfHeight * 2;
 
         public override Rectangle InWorldPixelBoundingBox
@@ -192,21 +193,18 @@ namespace CowMouse.InGameObjects
             get { return logTexture; }
         }
 
-        public override int xPositionDraw
+        private const int carryHeight = 20;
+
+        public override int VisualOffsetX
         {
-            get
-            {
-                return base.xPositionDraw;
-            }
+            get { return 32; }
         }
 
-        private const int carryHeight = -20;
-
-        public override int yPositionDraw
+        public override int VisualOffsetY
         {
             get
             {
-                return base.yPositionDraw + (IsBeingCarried ? carryHeight : 0);
+                return 48 + (IsBeingCarried ? carryHeight : 0);
             }
         }
     }

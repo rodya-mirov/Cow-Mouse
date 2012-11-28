@@ -72,6 +72,38 @@ namespace CowMouse.NPCs
             currentEnergy = ran.Next(sleepUntil);
         }
 
+        public override void Release()
+        {
+            base.Release();
+            changeMentalStateTo(AIState.Undecided);
+        }
+
+        /// <summary>
+        /// The tint to paint the sprite.  Used primarily to show the mood
+        /// or other state of the NPC.
+        /// </summary>
+        public override Color Tint
+        {
+            get
+            {
+                if (IsInhabited)
+                    return Color.Yellow;
+                else
+                {
+                    if (mentalState == AIState.Sleeping)
+                        return new Color(180, 180, 255);
+
+                    if (currentEnergy < tiredThreshold)
+                        return Color.LightPink;
+
+                    if (currentEnergy <= 0)
+                        return Color.Red;
+
+                    return Color.White;
+                }
+            }
+        }
+
         #region Hauling
         /// <summary>
         /// The item, if any, which is being hauled to a stockpile.
@@ -114,7 +146,7 @@ namespace CowMouse.NPCs
             foreach (Carryable car in Game.WorldManager.Carryables)
             {
                 if (car.IsMarkedForCollection && car.IntendedCollector == this)
-                    yield return car.SquareCoordinate();
+                    yield return car.SquareCoordinate;
             }
         }
 
@@ -142,7 +174,7 @@ namespace CowMouse.NPCs
         {
             return car.IsMarkedForCollection &&
                 car.IntendedCollector == this &&
-                car.SquareCoordinate() == myPoint;
+                car.SquareCoordinate == myPoint;
         }
 
         /// <summary>
@@ -189,23 +221,12 @@ namespace CowMouse.NPCs
             {
                 //if sleeping, gain energy
                 currentEnergy += 2;
-
-                //color them for sleeping
-                Tint = new Color(180, 180, 255); //somewhat blue
             }
             else
             {
                 //if not sleeping, get more tired, to a minimum of zero
                 if (currentEnergy > 0)
                     currentEnergy -= 1;
-
-                //adjust tint
-                if (currentEnergy < tiredThreshold)
-                    Tint = Color.LightPink;
-                else if (currentEnergy <= 0)
-                    Tint = Color.Red;
-                else
-                    Tint = Color.White;
             }
         }
 
@@ -238,12 +259,12 @@ namespace CowMouse.NPCs
         }
         #endregion
 
-        private GameTime lastUpdateTime;
-
-        public override void Update(GameTime time)
+        /// <summary>
+        /// The general update method when this NPC is being
+        /// controlled by its AI.
+        /// </summary>
+        protected override void aiUpdate()
         {
-            this.lastUpdateTime = time;
-
             getMoreTired();
 
             if (IsThinking)
@@ -277,7 +298,7 @@ namespace CowMouse.NPCs
         /// <returns></returns>
         private bool VerifyPath()
         {
-            Point current = this.SquareCoordinate();
+            Point current = this.SquareCoordinate;
             foreach (Point next in QueuedDestinations)
             {
                 if (current != next &&
@@ -454,7 +475,7 @@ namespace CowMouse.NPCs
 
             //we finished our path, so we should be standing on something that we
             //marked for collection earlier, so find it
-            Point myPoint = SquareCoordinate();
+            Point myPoint = SquareCoordinate;
             foreach (Carryable car in Game.WorldManager.Carryables)
             {
                 if (isThisMyMarkedItem(myPoint, car))
@@ -481,7 +502,7 @@ namespace CowMouse.NPCs
         /// </summary>
         private void endPathBringingResourceToStockpile()
         {
-            Point myPoint = SquareCoordinate();
+            Point myPoint = SquareCoordinate;
 
             bool isOnStockPile = false;
             foreach (Building b in Game.WorldManager.Buildings)
@@ -542,7 +563,7 @@ namespace CowMouse.NPCs
         private void bringToStockpile_ThreadHelper(HashSet<Point> destinations)
         {
             //now it's time to find a stockpile
-            Path path = PathHunter.GetPath(SquareCoordinate(), destinations, DefaultSearchDepth, Game.WorldManager, lastUpdateTime);
+            Path path = PathHunter.GetPath(SquareCoordinate, destinations, DefaultSearchDepth, Game.WorldManager, lastUpdateTime);
 
             if (path != null)
                 loadPathIntoQueue(path);
@@ -566,7 +587,7 @@ namespace CowMouse.NPCs
                 {
                     validHaulsExist = true;
                     car.MarkForCollection(this);
-                    destinations.Add(car.SquareCoordinate());
+                    destinations.Add(car.SquareCoordinate);
                 }
             }
 
@@ -580,7 +601,7 @@ namespace CowMouse.NPCs
         private void startLookingForResource_ThreadHelper(HashSet<Point> destinations)
         {
             //two ways this can go down; either we find something or not.
-            Path path = PathHunter.GetPath(SquareCoordinate(), destinations, DefaultSearchDepth, Game.WorldManager, this.lastUpdateTime);
+            Path path = PathHunter.GetPath(SquareCoordinate, destinations, DefaultSearchDepth, Game.WorldManager, this.lastUpdateTime);
 
             //if we found nothing, try again next frame
             if (path == null)
@@ -598,7 +619,7 @@ namespace CowMouse.NPCs
                 {
                     if (car.IsMarkedForCollection &&
                         car.IntendedCollector == this &&
-                        car.SquareCoordinate() == path.End)
+                        car.SquareCoordinate == path.End)
                     {
                         resource = car;
                         break;
@@ -654,7 +675,7 @@ namespace CowMouse.NPCs
 
         private void lookForBed_ThreadHelper(HashSet<Point> destinations)
         {
-            Path path = PathHunter.GetPath(SquareCoordinate(), destinations, DefaultSearchDepth, Game.WorldManager, lastUpdateTime);
+            Path path = PathHunter.GetPath(SquareCoordinate, destinations, DefaultSearchDepth, Game.WorldManager, lastUpdateTime);
 
             if (path != null)
                 loadPathIntoQueue(path);
@@ -667,7 +688,7 @@ namespace CowMouse.NPCs
         /// </summary>
         private void endPathLookingForBed()
         {
-            Point myPoint = SquareCoordinate();
+            Point myPoint = SquareCoordinate;
             bool isInBedroom = false;
 
             foreach (Building b in Game.WorldManager.Buildings)
