@@ -87,7 +87,7 @@ namespace CowMouse.NPCs
             }
         }
 
-        public NPC(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
+        public NPC(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, CowMouseTileMap map)
             : base(game, xCoordinate, yCoordinate, usingTileCoordinates, map)
         {
             thinkingThread = null;
@@ -263,7 +263,12 @@ namespace CowMouse.NPCs
             {
                 passOut();
             }
-            else if (QueuedDestinations.Count > 0 && VerifyPath()) //if we're there, but it was just a corner, queue up the next destination
+            else if (!VerifyPath())
+            {
+                getInterrupted();
+                changeMentalStateTo(AIState.Undecided);
+            }
+            else if (QueuedDestinations.Count > 0) //if we're there, but it was just a corner, queue up the next destination
             {
                 SetDestination(QueuedDestinations.Dequeue());
             }
@@ -278,6 +283,8 @@ namespace CowMouse.NPCs
         /// Checks if we can move from our current position to the
         /// next position on the queue, and from there to the next,
         /// and so on until the end.
+        /// 
+        /// Note the empty path yields true.
         /// </summary>
         /// <returns></returns>
         private bool VerifyPath()
@@ -319,7 +326,10 @@ namespace CowMouse.NPCs
         /// </summary>
         protected bool IsThinking
         {
-            get { return thinkingThread != null; }
+            get
+            {
+                return thinkingThread != null;
+            }
         }
 
         /// <summary>
@@ -399,7 +409,8 @@ namespace CowMouse.NPCs
             interruptedActions[AIState.Sleeping_GoingToBedroom] = interrupted_Sleeping_GoingToBedroom;
             interruptedActions[AIState.Sleeping_Unconscious] = interrupted_Sleeping_Unconscious;
 
-            interruptedActions[AIState.Hauling_Thinking] = interrupted_Thinking;
+            interruptedActions[AIState.Sleeping_Thinking] = interruptedThinking;
+            interruptedActions[AIState.Hauling_Thinking] = interruptedThinking;
         }
 
         /// <summary>
@@ -431,7 +442,7 @@ namespace CowMouse.NPCs
         }
 
         /// <summary>
-        /// This is called typically at the end of an action,
+        /// This is called typically at the end of an action
         /// and just invokes the pathEndAction associated to
         /// the current mentalState.
         /// </summary>
@@ -447,6 +458,9 @@ namespace CowMouse.NPCs
         /// </summary>
         private void getInterrupted()
         {
+            if (IsThinking)
+                throw new NotImplementedException("I honestly haven't figured out what to do here...");
+
             interruptedActions[mentalState].Invoke();
             CancelAndCleanUp();
         }
@@ -470,9 +484,9 @@ namespace CowMouse.NPCs
             changeMentalStateTo(AIState.Undecided);
         }
 
-        private void interrupted_Thinking()
+        private void interruptedThinking()
         {
-            throw new NotImplementedException();
+            //do nothing
         }
 
         /// <summary>
@@ -488,6 +502,7 @@ namespace CowMouse.NPCs
                 StoredGoals.Dequeue().CleanUp();
 
             CurrentGoal = null;
+            QueuedDestinations.Clear();
         }
 
         #region Undecided AI
@@ -664,13 +679,15 @@ namespace CowMouse.NPCs
             Goal_Carryable resourceGoal = CurrentGoal as Goal_Carryable;
 
             if (resourceGoal.GoalCarryable.SquareCoordinate != myPoint)
-                throw new InvalidOperationException("Why aren't we in the right place?");
-
-            pickUpItem(resourceGoal.GoalCarryable);
-
-            CurrentGoal.DeclareFinished();
-
-            changeMentalStateTo(AIState.Hauling_BringingResource);
+            {
+                throw new NotImplementedException();
+            }
+            else
+            {
+                pickUpItem(resourceGoal.GoalCarryable);
+                CurrentGoal.DeclareFinished();
+                changeMentalStateTo(AIState.Hauling_BringingResource);
+            }
         }
 
         /// <summary>
@@ -685,15 +702,20 @@ namespace CowMouse.NPCs
             Goal_Zone<Stockpile> stockpileGoal = CurrentGoal as Goal_Zone<Stockpile>;
 
             Point myPoint = SquareCoordinate;
+
             if (stockpileGoal.End.Item1 != myPoint)
-                throw new InvalidOperationException("Why aren't we in the right place?");
+            {
+                throw new NotImplementedException();
+            }
+            else
+            {
+                putDownItem(true);
+                stockpileGoal.End.Item2.OccupySquare(myPoint.X, myPoint.Y, this, heldItem);
 
-            putDownItem(true);
-            stockpileGoal.End.Item2.OccupySquare(myPoint.X, myPoint.Y, this, heldItem);
+                CurrentGoal.DeclareFinished();
 
-            CurrentGoal.DeclareFinished();
-
-            changeMentalStateTo(AIState.Undecided);
+                changeMentalStateTo(AIState.Undecided);
+            }
         }
 
         private void interrupted_Hauling_FindingResource()
@@ -705,7 +727,6 @@ namespace CowMouse.NPCs
         {
             putDownItem(false);
         }
-
         #endregion
 
         #region Sleeping AI
@@ -729,8 +750,8 @@ namespace CowMouse.NPCs
                 }
             }
 
-            //if there are no bedroompositions, quit
-            //with no success, there's no cleanup, either
+            //If there are no bedroompositions, quit.
+            //With no success, there's no cleanup either, which is nice.
             if (!bedroomsExist)
                 return;
 
@@ -812,9 +833,7 @@ namespace CowMouse.NPCs
 
             if (!isInBedroom)
             {
-                //if we didn't find a bedroom, try something else
-                CancelAndCleanUp();
-                changeMentalStateTo(AIState.Undecided);
+                throw new InvalidOperationException();
             }
             else
             {

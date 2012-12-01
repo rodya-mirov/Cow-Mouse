@@ -116,6 +116,8 @@
     <Compile Include="Buildings\Building.cs" />
     <Compile Include="Buildings\OccupiableZone.cs" />
     <Compile Include="Buildings\Stockpile.cs" />
+    <Compile Include="CowMouseMapCell.cs" />
+    <Compile Include="CowMouseTileMap.cs" />
     <Compile Include="InGameObjects\Carryable.cs" />
     <Compile Include="InGameObjects\InWorldObject.cs" />
     <Compile Include="InGameObjects\Log.cs" />

@@ -23,9 +23,9 @@ namespace CowMouse.Buildings
 
         private void addTiles()
         {
-            TileMap map = WorldManager.MyMap;
+            CowMouseTileMap map = WorldManager.MyMap;
 
-            MapCell floorCell = new MapCell(10, 0, 0);
+            CowMouseMapCell floorCell = new CowMouseMapCell(10, 0, 0);
             floorCell.AddTile(11, 0);
             floorCell.AddTile(12, 0);
             floorCell.AddTile(13, 0);

@@ -75,7 +75,7 @@ namespace CowMouse.InGameObjects
         /// </summary>
         /// <param name="cell"></param>
         /// <param name="manager"></param>
-        public void OverrideTouchedSquares(MapCell overrideCell, TileMapManager<InWorldObject> manager)
+        public void OverrideTouchedSquares(CowMouseMapCell overrideCell, WorldManager manager)
         {
             foreach (Point p in this.SquareCoordinatesTouched())
             {

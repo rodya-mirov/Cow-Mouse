@@ -15,7 +15,7 @@ namespace CowMouse.InGameObjects
         protected int xPos { get; set; }
         protected int yPos { get; set; }
 
-        protected TileMap Map { get; set; }
+        protected CowMouseTileMap Map { get; set; }
 
         #region Carrying business
         protected bool isBeingCarried;
@@ -105,7 +105,7 @@ namespace CowMouse.InGameObjects
         /// <param name="yCoordinate"></param>
         /// <param name="usingTileCoordinates">True if x,y are referring to SQUARES, or False if they are in-world "pixels"</param>
         /// <param name="map"></param>
-        public Log(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
+        public Log(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, CowMouseTileMap map)
         {
             this.Game = game;
 

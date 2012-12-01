@@ -19,7 +19,7 @@ namespace CowMouse.NPCs
         protected CowMouseGame Game { get; set; }
         protected int xPos { get; set; }
         protected int yPos { get; set; }
-        protected TileMap Map { get; set; }
+        protected CowMouseTileMap Map { get; set; }
 
         protected static Texture2D townsManTexture { get; set; }
         protected const string townsManTexturePath = @"Images\NPCs\TownsMan";
@@ -67,7 +67,7 @@ namespace CowMouse.NPCs
         /// <param name="yCoordinate"></param>
         /// <param name="usingTileCoordinates">True if x,y are referring to SQUARES, or False if they are in-world "pixels"</param>
         /// <param name="map"></param>
-        public Person(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
+        public Person(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, CowMouseTileMap map)
         {
             this.Game = game;
 

@@ -16,12 +16,12 @@ namespace CowMouse
     /// along with all the base functionality of the actual TileMapComponent, which
     /// it extends.
     /// </summary>
-    public class WorldManager : TileMapManager<InWorldObject>
+    public class WorldManager : TileMapManager<InWorldObject, CowMouseMapCell, CowMouseTileMap>
     {
         private const string TileSheetPath = @"Images\Tilesets\TileSheet";
 
-        private MapCell defaultHighlightCell { get; set; }
-        private MapCell defaultInvalidCell { get; set; }
+        private CowMouseMapCell defaultHighlightCell { get; set; }
+        private CowMouseMapCell defaultInvalidCell { get; set; }
 
         private SortedSet<Building> buildings;
         private Queue<Building> buildingQueue;
@@ -289,13 +289,13 @@ namespace CowMouse
         {
             base.Initialize();
 
-            defaultHighlightCell = new MapCell(2, 0, 0);
-            defaultInvalidCell = new MapCell(3, 0, 0);
+            defaultHighlightCell = new CowMouseMapCell(2, 0, 0);
+            defaultInvalidCell = new CowMouseMapCell(3, 0, 0);
         }
 
-        protected override TileMap makeMap()
+        protected override CowMouseTileMap makeMap()
         {
-            return new TileMap();
+            return new CowMouseTileMap();
         }
 
         public override void Update(GameTime gameTime)
@@ -366,7 +366,7 @@ namespace CowMouse
         {
             MyMap.ClearOverrides();
 
-            MapCell overrideCell;
+            CowMouseMapCell overrideCell;
             if (valid)
                 overrideCell = defaultHighlightCell;
             else
