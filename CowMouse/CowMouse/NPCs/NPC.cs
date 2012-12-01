@@ -8,6 +8,7 @@ using CowMouse.InGameObjects;
 using CowMouse.Buildings;
 using System.Threading;
 using TileEngine.Utilities.Pathfinding;
+using CowMouse.NPCs.Utilities;
 
 namespace CowMouse.NPCs
 {
@@ -52,40 +53,13 @@ namespace CowMouse.NPCs
     ///        determine any mental state changes necessary
     ///        if changeMentalStateTo is not called, will invoke endOfPath every update
     /// </summary>
-    class NPC : Person
+    public class NPC : Person
     {
         #region Tags
         public override bool IsNPC { get { return true; } }
         #endregion
 
         private static Random ran;
-
-        public NPC(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
-            : base(game, xCoordinate, yCoordinate, usingTileCoordinates, map)
-        {
-            mentalState = AIState.Undecided;
-            thinkingThread = null;
-
-            if (ran == null)
-                ran = new Random();
-
-            currentEnergy = ran.Next(sleepUntil);
-        }
-
-        #region Inhabitation
-        public override void Inhabit()
-        {
-            base.Inhabit();
-            if (IsCarryingItem)
-                putDownItem();
-        }
-
-        public override void Release()
-        {
-            base.Release();
-            changeMentalStateTo(AIState.Undecided);
-        }
-        #endregion
 
         /// <summary>
         /// The tint to paint the sprite.  Used primarily to show the mood
@@ -99,7 +73,7 @@ namespace CowMouse.NPCs
                     return Color.Yellow;
                 else
                 {
-                    if (mentalState == AIState.Sleeping)
+                    if (mentalState == AIState.Sleeping_Unconscious)
                         return new Color(180, 180, 255);
 
                     if (currentEnergy < tiredThreshold)
@@ -113,17 +87,45 @@ namespace CowMouse.NPCs
             }
         }
 
+        public NPC(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, TileMap map)
+            : base(game, xCoordinate, yCoordinate, usingTileCoordinates, map)
+        {
+            thinkingThread = null;
+
+            if (ran == null)
+                ran = new Random();
+
+            currentEnergy = ran.Next(sleepUntil);
+
+            setUpAI();
+        }
+
+        #region Inhabitation
+        public override void Inhabit()
+        {
+            base.Inhabit();
+            if (IsCarryingItem)
+                putDownItem(false);
+        }
+
+        public override void Release()
+        {
+            base.Release();
+            changeMentalStateTo(AIState.Undecided);
+        }
+        #endregion
+
         #region Hauling
         /// <summary>
         /// The item, if any, which is being hauled to a stockpile.
         /// </summary>
-        protected Carryable hauledItem;
+        protected Carryable heldItem;
 
         /// <summary>
         /// Whether or not this NPC is currently carrying an item (for
         /// the purpose of hauling it to a stockpile)
         /// </summary>
-        public bool IsCarryingItem { get { return hauledItem != null; } }
+        public bool IsCarryingItem { get { return heldItem != null; } }
 
         /// <summary>
         /// Pick up the specified item, and all that entails.
@@ -132,17 +134,18 @@ namespace CowMouse.NPCs
         private void pickUpItem(Carryable resource)
         {
             resource.GetPickedUp(this);
-            this.hauledItem = resource;
+            this.heldItem = resource;
         }
 
         /// <summary>
         /// Put down any hauled item, and all that entails.
         /// Throws a fit if we're not actually hauling anything.
         /// </summary>
-        private void putDownItem()
+        private void putDownItem(bool isInStockpile)
         {
-            hauledItem.GetPutDown();
-            hauledItem = null;
+            heldItem.GetPutDown();
+            heldItem.IsInStockpile = isInStockpile;
+            heldItem = null;
         }
 
         /// <summary>
@@ -185,34 +188,6 @@ namespace CowMouse.NPCs
                 car.IntendedCollector == this &&
                 car.SquareCoordinate == myPoint;
         }
-
-        /// <summary>
-        /// Just determines whether there is a stockpile we could haul
-        /// something to.
-        /// </summary>
-        /// <returns></returns>
-        private bool StockpilesExist()
-        {
-            foreach (Point p in Game.WorldManager.StockpilePositions)
-                return true;
-
-            return false;
-        }
-
-        /// <summary>
-        /// Determines whether or not something exists that is worth hauling.
-        /// </summary>
-        /// <returns></returns>
-        private bool ResourcesExist()
-        {
-            foreach (Carryable car in Game.WorldManager.Carryables)
-            {
-                if (isValidForHauling(car))
-                    return true;
-            }
-
-            return false;
-        }
         #endregion
 
         #region Sleeping
@@ -226,7 +201,7 @@ namespace CowMouse.NPCs
         /// </summary>
         private void getMoreTired()
         {
-            if (mentalState == AIState.Sleeping)
+            if (mentalState == AIState.Sleeping_Unconscious)
             {
                 //if sleeping, gain energy
                 currentEnergy += 2;
@@ -326,7 +301,7 @@ namespace CowMouse.NPCs
         /// Given a path, load it into the destinations queue
         /// </summary>
         /// <param name="newPath"></param>
-        private void loadPathIntoQueue(Path newPath)
+        private void setRoute(Path newPath)
         {
             QueuedDestinations.Clear();
 
@@ -348,87 +323,132 @@ namespace CowMouse.NPCs
         }
 
         /// <summary>
+        /// The actions invoked by a change of state.  The argument is
+        /// the previous state!
+        /// </summary>
+        protected Dictionary<AIState, Action<AIState>> stateChangeActions;
+
+        /// <summary>
+        /// The actions invoked by reaching the end of the current route.
+        /// </summary>
+        protected Dictionary<AIState, Action> pathEndActions;
+
+        /// <summary>
+        /// The actions invoked when something interrupts the current task.
+        /// </summary>
+        protected Dictionary<AIState, Action> interruptedActions;
+
+        /// <summary>
+        /// Load up the AI
+        /// </summary>
+        protected void setUpAI()
+        {
+            setUpStateChangeActions();
+            setUpPathEndActions();
+            setUpInterruptedActions();
+        }
+
+        /// <summary>
+        /// Rig up the AI's state change actions
+        /// </summary>
+        protected void setUpStateChangeActions()
+        {
+            stateChangeActions = new Dictionary<AIState, Action<AIState>>();
+
+            stateChangeActions[AIState.Undecided] = startStateNoTask;
+            stateChangeActions[AIState.Sleeping_Thinking] = startPhase_Sleeping;
+            stateChangeActions[AIState.Sleeping_GoingToBedroom] = startSubPhase_Sleeping_GoingToBedroom;
+            stateChangeActions[AIState.Sleeping_Unconscious] = startSubPhase_Sleeping_Unconscious;
+
+            stateChangeActions[AIState.Hauling_Thinking] = startPhase_Hauling;
+            stateChangeActions[AIState.Hauling_FindingResource] = startSubPhase_Hauling_FindingResource;
+            stateChangeActions[AIState.Hauling_BringingResource] = startSubPhase_Hauling_BringingResource;
+        }
+
+        /// <summary>
+        /// Rigs up the AI's end of path actions.
+        /// </summary>
+        protected void setUpPathEndActions()
+        {
+            pathEndActions = new Dictionary<AIState, Action>();
+
+            pathEndActions[AIState.Undecided] = endPathNoTask;
+
+            pathEndActions[AIState.Sleeping_GoingToBedroom] = endOfPath_Sleeping_GoingToBedroom;
+            pathEndActions[AIState.Sleeping_Unconscious] = endOfPath_Sleeping_Unconscious;
+
+            pathEndActions[AIState.Hauling_FindingResource] = endOfPath_Hauling_FindingResource;
+            pathEndActions[AIState.Hauling_BringingResource] = endOfPath_Hauling_BringingResource;
+
+            pathEndActions[AIState.Hauling_Thinking] = endOfPath_Thinking;
+            pathEndActions[AIState.Sleeping_Thinking] = endOfPath_Thinking;
+        }
+
+        /// <summary>
+        /// Sets up the dictionary of interruption actions.
+        /// </summary>
+        protected void setUpInterruptedActions()
+        {
+            interruptedActions = new Dictionary<AIState, Action>();
+
+            interruptedActions[AIState.Undecided] = interruptedNoTask;
+
+            interruptedActions[AIState.Hauling_FindingResource] = interrupted_Hauling_FindingResource;
+            interruptedActions[AIState.Hauling_BringingResource] = interrupted_Hauling_BringingResource;
+
+            interruptedActions[AIState.Sleeping_GoingToBedroom] = interrupted_Sleeping_GoingToBedroom;
+            interruptedActions[AIState.Sleeping_Unconscious] = interrupted_Sleeping_Unconscious;
+
+            interruptedActions[AIState.Hauling_Thinking] = interrupted_Thinking;
+        }
+
+        /// <summary>
         /// The maximum cost of any path to be hunted for.  Corresponds roughly to how
         /// long the longest path is, before the path algorithm just throws up its hands
         /// and leaves you to your own devices.
         /// </summary>
         protected const int DefaultSearchDepth = 300;
 
-        protected AIState mentalState;
-        protected Thread thinkingThread;
+        protected AIState mentalState = AIState.Undecided;
+        protected Thread thinkingThread = null;
+
+        protected Queue<Goal> StoredGoals = new Queue<Goal>();
+        protected Goal CurrentGoal = null;
 
         /// <summary>
-        /// This method is one of the two workhorses for the AI (mainly as a switchboard, admittedly).
-        /// This is the BEGINNING of an action, so frequently involves the thinking thread and setting up
-        /// a path.
+        /// This is the beginning of a new action, and there's
+        /// very little cleanup/setup to do.  It just changes
+        /// the mental state, then calls the stateChangeAction
+        /// corresponding to the new state.
         /// </summary>
         /// <param name="newState"></param>
         private void changeMentalStateTo(AIState newState)
         {
-            QueuedDestinations.Clear();
-
             AIState oldState = mentalState;
             mentalState = newState;
 
-            switch (newState)
-            {
-                case AIState.Undecided:
-                    startStateNoTask(oldState);
-                    break;
-
-                case AIState.Finding_Resource_To_Haul:
-                    startLookingForResource();
-                    break;
-
-                case AIState.Bringing_Resource_To_Stockpile:
-                    startStateBringToStockpile();
-                    break;
-
-                case AIState.Looking_For_Bed:
-                    startStateLookForBed();
-                    break;
-
-                case AIState.Sleeping:
-                    startStateSleep();
-                    break;
-
-                default:
-                    throw new NotImplementedException();
-            }
+            stateChangeActions[mentalState].Invoke(oldState);
         }
 
         /// <summary>
-        /// This is one of two workhorses for the AI, although it's
-        /// mainly a switchboard.  Fundamentally, this deals with the END
-        /// of an action- doing things, rather than deciding things.
+        /// This is called typically at the end of an action,
+        /// and just invokes the pathEndAction associated to
+        /// the current mentalState.
         /// </summary>
         private void endOfPath()
         {
-            switch (mentalState)
-            {
-                case AIState.Undecided:
-                    endPathNoTask();
-                    break;
+            pathEndActions[mentalState].Invoke();
+        }
 
-                case AIState.Finding_Resource_To_Haul:
-                    endPathLookingForResource();
-                    break;
-
-                case AIState.Bringing_Resource_To_Stockpile:
-                    endPathBringingResourceToStockpile();
-                    break;
-
-                case AIState.Looking_For_Bed:
-                    endPathLookingForBed();
-                    break;
-
-                case AIState.Sleeping:
-                    endPathSleeping();
-                    break;
-
-                default:
-                    throw new NotImplementedException();
-            }
+        /// <summary>
+        /// Handles task interruptions; calls any state-specific
+        /// code from interruptedActions, and also calls
+        /// cancelAndCleanUp (afterward).
+        /// </summary>
+        private void getInterrupted()
+        {
+            interruptedActions[mentalState].Invoke();
+            CancelAndCleanUp();
         }
 
         /// <summary>
@@ -440,7 +460,46 @@ namespace CowMouse.NPCs
             thinkingThread.Start();
         }
 
+        /// <summary>
+        /// Typically invoked when a pathing attempt failed before it started (because
+        /// there were no feasible destinations, usually).  Just sets the mentalState
+        /// back to Undecided.
+        /// </summary>
+        private void endOfPath_Thinking()
+        {
+            changeMentalStateTo(AIState.Undecided);
+        }
+
+        private void interrupted_Thinking()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Cancels current goals and cleans up all stored actions and task-oriented
+        /// foolishness, getting the NPC into a reasonably blank state.
+        /// </summary>
+        protected void CancelAndCleanUp()
+        {
+            if (CurrentGoal != null)
+                CurrentGoal.CleanUp();
+
+            while (StoredGoals.Count > 0)
+                StoredGoals.Dequeue().CleanUp();
+
+            CurrentGoal = null;
+        }
+
         #region Undecided AI
+        /// <summary>
+        /// Switching to undecided does nothing until the next turn.
+        /// </summary>
+        /// <param name="previousState"></param>
+        private void startStateNoTask(AIState previousState)
+        {
+            //does nothing; this is handled in the endPathNoTask thing.
+        }
+
         /// <summary>
         /// Start condition; we have no task.
         /// 
@@ -448,334 +507,390 @@ namespace CowMouse.NPCs
         /// </summary>
         private void endPathNoTask()
         {
-            changeMentalStateTo(AIState.Undecided);
+            //if we're tired and we didn't just give up on finding a bed...
+            if (isTired())
+            {
+                changeMentalStateTo(AIState.Sleeping_Thinking);
+            }
+            else
+            {
+                changeMentalStateTo(AIState.Hauling_Thinking);
+            }
         }
 
-        private void startStateNoTask(AIState previousState)
+        private void interruptedNoTask()
         {
-            //if we're tired and we didn't just give up on finding a bed...
-            if (isTired() && previousState != AIState.Looking_For_Bed)
-            {
-                changeMentalStateTo(AIState.Looking_For_Bed);
-            }
-            else if (StockpilesExist() && ResourcesExist())
-            {
-                changeMentalStateTo(AIState.Finding_Resource_To_Haul);
-            }
+            //nothing :)
         }
         #endregion
 
         #region Hauling AI
         /// <summary>
-        /// End of path for looking for resource.
-        /// 
-        /// There are two ways this could happen.
-        /// 1) We ended a path looking for a resource
-        ///         In this case, we should be standing on
-        ///         a resource, so pick it up and carry it
-        ///         to a stockpile.
-        /// 2) We were in the looking for resource state,
-        ///    but didn't find anything.
-        ///         In this case, try again on the pathing
-        ///         thing.
+        /// Hauling is a two-fold process; finding an item, then bringing it
+        /// to a stockpile.  This requires two paths, both of which are found
+        /// here.
         /// </summary>
-        private void endPathLookingForResource()
+        private void startPhase_Hauling(AIState previousState)
         {
-            if (IsCarryingItem)
-                throw new InvalidOperationException("Shouldn't be looking for resource when we're holding something?");
+            CancelAndCleanUp();
 
-            //we finished our path, so we should be standing on something that we
-            //marked for collection earlier, so find it
-            Point myPoint = SquareCoordinate;
-            foreach (Carryable car in Game.WorldManager.Carryables)
-            {
-                if (isThisMyMarkedItem(myPoint, car))
-                {
-                    pickUpItem(car);
-                    break;
-                }
-            }
-
-            //Now either we found something or not
-            if (IsCarryingItem) //if so, bring it away
-            {
-                changeMentalStateTo(AIState.Bringing_Resource_To_Stockpile);
-            }
-            else //if not, maybe find another task?
-            {
-                changeMentalStateTo(AIState.Undecided);
-            }
-        }
-
-        /// <summary>
-        /// If we're on a stockpile, drop what we're holding and move on.
-        /// If not, try again to find a path to a stockpile
-        /// </summary>
-        private void endPathBringingResourceToStockpile()
-        {
-            Point myPoint = SquareCoordinate;
-
-            bool isOnStockPile = false;
-            foreach (Building b in Game.WorldManager.Buildings)
-            {
-                if (b.IsStockpile && b.ContainsCell(myPoint.X, myPoint.Y))
-                {
-                    isOnStockPile = true;
-                    break;
-                }
-            }
-
-            if (isOnStockPile) //if we found a stockpile, put our stuff down and move on
-            {
-                putDownItem();
-                changeMentalStateTo(AIState.Undecided);
-            }
-            else //if we didn't find the stockpile
-            {
-                if (isTired())
-                {
-                    //if we're tired, give up and find a new task
-                    putDownItem();
-                    changeMentalStateTo(AIState.Undecided);
-                }
-                else
-                {
-                    //if we're not tired, keep trying
-                    changeMentalStateTo(AIState.Bringing_Resource_To_Stockpile);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Once we're holding something, try to find a stockpile.
-        /// If we found a path, follow it; if not, just do nothing.
-        /// </summary>
-        private void startStateBringToStockpile()
-        {
-            if (!IsCarryingItem)
-                throw new InvalidOperationException("Shouldn't be looking for a stockpile if we have nothing to put there!");
-            
-            if (StockpilesExist())
-            {
-                HashSet<Point> destinations = new HashSet<Point>(Game.WorldManager.StockpilePositions);
-
-                if (destinations.Count > 0)
-                {
-                    thinkingThread = new Thread(() => bringToStockpile_ThreadHelper(destinations));
-                    startThinkingThread();
-                }
-                else
-                {
-                    throw new InvalidOperationException("We *just* checked that was nonempty!");
-                }
-            }
-        }
-
-        private void bringToStockpile_ThreadHelper(HashSet<Point> destinations)
-        {
-            //now it's time to find a stockpile
-            Path path = PathHunter.GetPath(SquareCoordinate, destinations, DefaultSearchDepth, Game.WorldManager, lastUpdateTime);
-
-            if (path != null)
-                loadPathIntoQueue(path);
-
-            thinkingThread = null;
-        }
-
-        /// <summary>
-        /// Find a path to a resource.
-        /// If we found one, mark the resource we found, and move toward it.
-        /// If we didn't find one, we must be done, so relax (change to No_Task).
-        /// </summary>
-        private void startLookingForResource()
-        {
             //first, we need to mark every possible hauling candidate
-            bool validHaulsExist = false;
-            HashSet<Point> destinations = new HashSet<Point>();
+            bool validResourcesExist = false;
+            HashSet<Carryable> validResources = new HashSet<Carryable>();
+
             foreach (Carryable car in Game.WorldManager.Carryables)
             {
                 if (isValidForHauling(car))
                 {
-                    validHaulsExist = true;
-                    car.MarkForCollection(this);
-                    destinations.Add(car.SquareCoordinate);
+                    validResourcesExist = true;
+                    validResources.Add(car);
                 }
             }
 
-            if (validHaulsExist)
+            //next check for stockpiles
+            bool validStockpilesExist = false;
+            HashSet<Stockpile> validStockpiles = new HashSet<Stockpile>();
+
+            foreach (Stockpile pile in Game.WorldManager.Stockpiles)
             {
-                thinkingThread = new Thread(() => startLookingForResource_ThreadHelper(destinations));
-                startThinkingThread();
+                if (pile.HasFreeSquare())
+                {
+                    validStockpilesExist = true;
+                    validStockpiles.Add(pile);
+                }
             }
+
+            //if there aren't any of some type, just quit now
+            //there won't be any cleanup that needs to be done, yet
+            if (!validResourcesExist || !validStockpilesExist)
+                return;
+
+            //but now there is :)
+            Goal resourceGoal = new Goal_Carryable(validResources, this);
+            Goal stockpileGoal = new Goal_Zone<Stockpile>(validStockpiles, this);
+
+            StoredGoals.Enqueue(resourceGoal);
+            StoredGoals.Enqueue(stockpileGoal);
+
+            //otherwise, we can get on with our lives
+            thinkingThread = new Thread(() => startLookingForResource_ThreadHelper(resourceGoal.MarkedLocations(), stockpileGoal.MarkedLocations()));
+            startThinkingThread();
         }
 
-        private void startLookingForResource_ThreadHelper(HashSet<Point> destinations)
+        /// <summary>
+        /// Given the valid sets of data, we can now find two paths.
+        /// If successful, will load them both onto the savedPaths queue, unmark leftover marked positions,
+        /// and move on to the next part of the phase.
+        /// 
+        /// If not, will still clean up the marked positions, and then wait to be done.
+        /// </summary>
+        /// <param name="resourceLocations"></param>
+        /// <param name="stockpileLocations"></param>
+        private void startLookingForResource_ThreadHelper(HashSet<Point> resourceLocations, HashSet<Point> stockpileLocations)
         {
-            //two ways this can go down; either we find something or not.
-            Path path = PathHunter.GetPath(SquareCoordinate, destinations, DefaultSearchDepth, Game.WorldManager, this.lastUpdateTime);
+            Path pathToResources = null;
+            Path pathToStockpile = null;
 
-            //if we found nothing, try again next frame
-            if (path == null)
+            pathToResources = PathHunter.GetPath(SquareCoordinate, resourceLocations, DefaultSearchDepth, Game.WorldManager, this.lastUpdateTime);
+
+            if (pathToResources == null)
             {
-                //relax
+                CancelAndCleanUp();
+                return;
             }
-            else //otherwise, go down that path
+
+            //grab the first goal, which is the "to resource" goal, and cycle the queue
+            Goal_Carryable resourceGoal = StoredGoals.Dequeue() as Goal_Carryable;
+            StoredGoals.Enqueue(resourceGoal);
+
+            //unmark the excess and rig this goal up to go to the correct resource
+            resourceGoal.FinishThinking(pathToResources);
+
+            //now find the next path
+            pathToStockpile = PathHunter.GetPath(pathToResources.End, stockpileLocations, DefaultSearchDepth, Game.WorldManager, this.lastUpdateTime);
+
+            if (pathToStockpile == null)
             {
-                loadPathIntoQueue(path);
-
-                Carryable resource = null;
-
-                //also, find the resource that we latched onto earlier
-                foreach (Carryable car in Game.WorldManager.Carryables)
-                {
-                    if (car.IsMarkedForCollection &&
-                        car.IntendedCollector == this &&
-                        car.SquareCoordinate == path.End)
-                    {
-                        resource = car;
-                        break;
-                    }
-                }
-
-                //we really should have found a resource, since we pathed to one
-                if (resource == null)
-                    throw new InvalidOperationException("Why didn't we find any...?");
-
-                //and unmark everything else (we really did mark a lot didn't we?)
-                foreach (Carryable car in Game.WorldManager.Carryables)
-                {
-                    if (car != resource && car.IsMarkedForCollection && car.IntendedCollector == this)
-                    {
-                        car.UnMarkForCollection(this);
-                    }
-                }
+                CancelAndCleanUp();
+                return;
             }
+
+            //now grab the second goal, which is the "to stockpile" goal, and cycle the queue
+            Goal_Zone<Stockpile> stockpileGoal = StoredGoals.Dequeue() as Goal_Zone<Stockpile>;
+            StoredGoals.Enqueue(stockpileGoal);
+
+            //unmark the excess and rig the goal up!
+            stockpileGoal.FinishThinking(pathToStockpile);
+
+            //start heading off in the right direction!
+            changeMentalStateTo(AIState.Hauling_FindingResource);
 
             thinkingThread = null;
         }
+
+        /// <summary>
+        /// Starts down along the road to finding the goal resource.
+        /// Not actually much to be done; pathing was handled in the
+        /// thinking phase.
+        /// </summary>
+        private void startSubPhase_Hauling_FindingResource(AIState previousState)
+        {
+            CurrentGoal = StoredGoals.Dequeue();
+            setRoute(CurrentGoal.Route);
+        }
+
+        /// <summary>
+        /// Start along the road to the goal stockpile.
+        /// Not a lot to do here; pathing was handled in
+        /// the Thinking phase.
+        /// </summary>
+        private void startSubPhase_Hauling_BringingResource(AIState previousState)
+        {
+            CurrentGoal = StoredGoals.Dequeue();
+            setRoute(CurrentGoal.Route);
+        }
+
+        /// <summary>
+        /// We ended path looking for a resource, so we
+        /// should now be standing on one.  Pick it up
+        /// and change state to BringingResource.
+        /// </summary>
+        private void endOfPath_Hauling_FindingResource()
+        {
+            if (IsCarryingItem)
+                throw new InvalidOperationException("Shouldn't be looking for resource when we're holding something?");
+
+            Point myPoint = SquareCoordinate;
+            Goal_Carryable resourceGoal = CurrentGoal as Goal_Carryable;
+
+            if (resourceGoal.GoalCarryable.SquareCoordinate != myPoint)
+                throw new InvalidOperationException("Why aren't we in the right place?");
+
+            pickUpItem(resourceGoal.GoalCarryable);
+
+            CurrentGoal.DeclareFinished();
+
+            changeMentalStateTo(AIState.Hauling_BringingResource);
+        }
+
+        /// <summary>
+        /// Arrives at the stockpile, puts the item, and changes state
+        /// to Undecided.  Throws a fit if any of this fails.
+        /// </summary>
+        private void endOfPath_Hauling_BringingResource()
+        {
+            if (!IsCarryingItem)
+                throw new InvalidOperationException("YOU DARE APPROACH THIS PLACE EMPTYHANDED?!");
+
+            Goal_Zone<Stockpile> stockpileGoal = CurrentGoal as Goal_Zone<Stockpile>;
+
+            Point myPoint = SquareCoordinate;
+            if (stockpileGoal.End.Item1 != myPoint)
+                throw new InvalidOperationException("Why aren't we in the right place?");
+
+            putDownItem(true);
+            stockpileGoal.End.Item2.OccupySquare(myPoint.X, myPoint.Y, this, heldItem);
+
+            CurrentGoal.DeclareFinished();
+
+            changeMentalStateTo(AIState.Undecided);
+        }
+
+        private void interrupted_Hauling_FindingResource()
+        {
+            //nothing!
+        }
+
+        private void interrupted_Hauling_BringingResource()
+        {
+            putDownItem(false);
+        }
+
         #endregion
 
         #region Sleeping AI
         /// <summary>
-        /// Hunt for a bedroom, if one exists.
+        /// This starts the (planned) sleeping process; it finds a path to a bedroom,
+        /// claims it, and starts moving toward it.
         /// </summary>
-        private void startStateLookForBed()
+        private void startPhase_Sleeping(AIState previousState)
         {
+            CancelAndCleanUp();
+
             bool bedroomsExist = false;
-            foreach (Point p in Game.WorldManager.BedroomPositions)
-            {
-                bedroomsExist = true;
-                break;
-            }
+            HashSet<Bedroom> validBedrooms = new HashSet<Bedroom>();
 
-            if (bedroomsExist)
+            foreach (Bedroom bedroom in Game.WorldManager.Bedrooms)
             {
-                HashSet<Point> destinations = new HashSet<Point>(Game.WorldManager.BedroomPositions);
-
-                if (destinations.Count > 0)
+                if (bedroom.HasFreeSquare())
                 {
-                    thinkingThread = new Thread(() => lookForBed_ThreadHelper(destinations));
-                    startThinkingThread();
-                }
-                else
-                {
-                    throw new InvalidOperationException("We *just* checked that was nonempty!");
+                    bedroomsExist = true;
+                    validBedrooms.Add(bedroom);
                 }
             }
+
+            //if there are no bedroompositions, quit
+            //with no success, there's no cleanup, either
+            if (!bedroomsExist)
+                return;
+
+            Goal_Zone<Bedroom> bedroomGoal = new Goal_Zone<Bedroom>(validBedrooms, this);
+            StoredGoals.Enqueue(bedroomGoal);
+
+            HashSet<Point> bedroomLocations = bedroomGoal.MarkedLocations();
+
+            thinkingThread = new Thread(() => startPhase_Sleeping_ThreadHelper(bedroomLocations));
+            startThinkingThread();
         }
 
-        private void lookForBed_ThreadHelper(HashSet<Point> destinations)
+        /// <summary>
+        /// The deferred part of startPhase_Sleeping.  It finds a path.
+        /// 
+        /// If successful, loads it into the PathQueue and changes state to
+        /// Sleeping_GoingToBedroom.  It also handles the cleanup (unmarking
+        /// excess bedrooms) and the handling of currentBedrooms.
+        /// 
+        /// If unsuccessful, changes state back to Undecided.
+        /// 
+        /// Then sets thinking to false.
+        /// </summary>
+        /// <param name="destinations"></param>
+        private void startPhase_Sleeping_ThreadHelper(HashSet<Point> destinations)
         {
-            Path path = PathHunter.GetPath(SquareCoordinate, destinations, DefaultSearchDepth, Game.WorldManager, lastUpdateTime);
+            Path bedroomPath = PathHunter.GetPath(SquareCoordinate, destinations, DefaultSearchDepth, Game.WorldManager, lastUpdateTime);
 
-            if (path != null)
-                loadPathIntoQueue(path);
+            if (bedroomPath == null)
+            {
+                CancelAndCleanUp();
+                changeMentalStateTo(AIState.Undecided);
+            }
 
+            //Rig up the goals!
+            Goal_Zone<Bedroom> bedroomGoal = (StoredGoals.Dequeue() as Goal_Zone<Bedroom>);
+            bedroomGoal.FinishThinking(bedroomPath);
+            StoredGoals.Enqueue(bedroomGoal);
+
+            //and move to the next stage
+            changeMentalStateTo(AIState.Sleeping_GoingToBedroom);
+
+            //and we're done!  hurrah
             thinkingThread = null;
         }
 
         /// <summary>
-        /// Deal with the end of path, when we're looking for bed.
+        /// We've started going to the bedroom, so load up our
+        /// first stored path and start ourselves along it.
         /// </summary>
-        private void endPathLookingForBed()
+        private void startSubPhase_Sleeping_GoingToBedroom(AIState previousState)
         {
-            Point myPoint = SquareCoordinate;
-            bool isInBedroom = false;
+            CurrentGoal = StoredGoals.Dequeue();
+            setRoute(CurrentGoal.Route);
+        }
 
-            foreach (Building b in Game.WorldManager.Buildings)
-            {
-                if (b.IsBedroom && b.ContainsCell(myPoint.X, myPoint.Y))
-                {
-                    isInBedroom = true;
-                    break;
-                }
-            }
+        /// <summary>
+        /// Nothing to do
+        /// </summary>
+        private void startSubPhase_Sleeping_Unconscious(AIState previousState)
+        {
+            //does nothing :)
+        }
+
+        /// <summary>
+        /// Deal with the end of path, when we're looking for bed.
+        /// If we successfully found our bedroom, success!  Occupy
+        /// it and go to sleep.
+        /// 
+        /// If not, change to undecided, and if our bedroom was marked
+        /// (and we just didn't make it there for some reason) unmark
+        /// it.
+        /// </summary>
+        private void endOfPath_Sleeping_GoingToBedroom()
+        {
+            Goal_Zone<Bedroom> bedroomGoal = CurrentGoal as Goal_Zone<Bedroom>;
+
+            bool isInBedroom = (SquareCoordinate == bedroomGoal.End.Item1);
 
             if (!isInBedroom)
             {
                 //if we didn't find a bedroom, try something else
+                CancelAndCleanUp();
                 changeMentalStateTo(AIState.Undecided);
             }
             else
             {
-                //if we did find a bedroom, go to sleep
-                changeMentalStateTo(AIState.Sleeping);
+                //if we did find a bedroom, occupy it ...
+                bedroomGoal.End.Item2.OccupySquare(bedroomGoal.End.Item1.X, bedroomGoal.End.Item1.Y, this, this);
+                bedroomGoal.DeclareFinished();
+
+                //... and fall asleep
+                changeMentalStateTo(AIState.Sleeping_Unconscious);
             }
         }
 
         /// <summary>
-        /// Sleep until we're done sleeping!
+        /// At the end of the turn, determine whether you want to wake up.
         /// </summary>
-        private void startStateSleep()
+        private void endOfPath_Sleeping_Unconscious()
         {
             if (shouldWakeUp())
+            {
+                //if we got here on purpose, then we're occupying
+                //a square, so unoccupy it when we wake up
+                if (CurrentGoal != null)
+                {
+                    Goal_Zone<Bedroom> bedroomGoal = CurrentGoal as Goal_Zone<Bedroom>;
+                    bedroomGoal.End.Item2.UnOccupySquare(bedroomGoal.End.Item1.X, bedroomGoal.End.Item1.Y, this);
+                }
+
+                CancelAndCleanUp();
                 changeMentalStateTo(AIState.Undecided);
+            }
 
             //else nothing!  just relax :)
         }
 
-        /// <summary>
-        /// When you're sleeping, there's nowhere to go :)
-        /// </summary>
-        private void endPathSleeping()
+        private void interrupted_Sleeping_GoingToBedroom()
         {
-            changeMentalStateTo(AIState.Sleeping);
+            //nothing
         }
 
+        private void interrupted_Sleeping_Unconscious()
+        {
+            //nothing
+        }
+        #endregion
+
+        #region Interruptions
         /// <summary>
         /// When you just can't go anymore, sleep where you are.
         /// </summary>
         private void passOut()
         {
-            //drop your possessions...
-            if (IsCarryingItem)
-                putDownItem();
-
-            //...forget your cares...
-            QueuedDestinations.Clear();
+            getInterrupted();
+            StoredGoals.Clear();
 
             //and sleep!
-            changeMentalStateTo(AIState.Sleeping);
+            changeMentalStateTo(AIState.Sleeping_Unconscious);
         }
         #endregion
 
         #endregion
+
+        #region AI States
+        public enum AIState
+        {
+            Undecided,
+
+            //Hauling subdivision
+            Hauling_Thinking,
+            Hauling_FindingResource,
+            Hauling_BringingResource,
+
+            //Sleeping subdivision
+            Sleeping_Thinking,
+            Sleeping_GoingToBedroom,
+            Sleeping_Unconscious
+        }
+        #endregion
     }
-
-    #region States
-    public enum AIState
-    {
-        Undecided,
-
-        //these two are really the same task,
-        //but split into two states
-        Finding_Resource_To_Haul,       //enter state
-        Bringing_Resource_To_Stockpile, //exit state
-
-        //these two are really the same task,
-        //but split into two states
-        Looking_For_Bed,                //enter state
-        Sleeping                        //exit state
-    }
-    #endregion
 }

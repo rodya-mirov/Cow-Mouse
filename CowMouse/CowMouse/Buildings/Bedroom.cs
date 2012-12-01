@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using TileEngine;
+using CowMouse.InGameObjects;
+using CowMouse.NPCs;
 
 namespace CowMouse.Buildings
 {
-    public class Bedroom : Building
+    public class Bedroom : OccupiableZone
     {
         #region Tags
         public override bool Passable { get { return true; } }

@@ -123,7 +123,7 @@ namespace CowMouse
 
             npcs = new Queue<Person>();
             pixels = new Queue<DebugPixel>();
-            makeRandomNPCs(5);
+            makeRandomNPCs(10);
 
             Console.WriteLine("NPCed");
 
@@ -244,7 +244,7 @@ namespace CowMouse
         /// Enumerates all the internal points of all the stockpiles
         /// in the world.
         /// </summary>
-        public IEnumerable<Point> StockpilePositions
+        public IEnumerable<Stockpile> Stockpiles
         {
             get
             {
@@ -252,8 +252,7 @@ namespace CowMouse
                 {
                     if (b.IsStockpile)
                     {
-                        foreach (Point p in b.InternalPoints)
-                            yield return p;
+                        yield return b as Stockpile;
                     }
                 }
             }
@@ -263,7 +262,7 @@ namespace CowMouse
         /// Enumerates all the internal points of all the bedrooms
         /// in the world.
         /// </summary>
-        public IEnumerable<Point> BedroomPositions
+        public IEnumerable<Bedroom> Bedrooms
         {
             get
             {
@@ -271,8 +270,7 @@ namespace CowMouse
                 {
                     if (b.IsBedroom)
                     {
-                        foreach (Point p in b.InternalPoints)
-                            yield return p;
+                        yield return (Bedroom)b;
                     }
                 }
             }

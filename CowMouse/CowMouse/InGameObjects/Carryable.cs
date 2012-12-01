@@ -84,7 +84,7 @@ namespace CowMouse.InGameObjects
         /// <summary>
         /// Indicates whether or not this is in a stockpile.
         /// </summary>
-        public abstract bool IsInStockpile { get; }
+        public abstract bool IsInStockpile { get; set; }
         #endregion
     }
 }

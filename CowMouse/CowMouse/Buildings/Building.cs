@@ -24,6 +24,25 @@ namespace CowMouse.Buildings
 
         public WorldManager WorldManager { get; protected set; }
 
+        #region Dimensions
+        /// <summary>
+        /// How many columns are in this building.  Note this
+        /// is XMax-XMin+1, since XMax is a valid index.
+        /// </summary>
+        public int Width { get { return XMax - XMin + 1; } }
+
+        /// <summary>
+        /// How many rows are in this building.  Note this
+        /// is YMax-YMin+1, since YMax is a valid index.
+        /// </summary>
+        public int Height { get { return YMax - YMin + 1; } }
+
+        /// <summary>
+        /// How many squares are in this building.
+        /// </summary>
+        public int Area { get { return Width * Height; } }
+        #endregion
+
         /// <summary>
         /// Determines the distance from this building to the
         /// specified point p.  Uses the bounding box.

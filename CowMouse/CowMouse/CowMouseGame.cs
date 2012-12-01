@@ -84,7 +84,7 @@ namespace CowMouse
         /// </summary>
         private void InhabitFollowedNPC()
         {
-            switch(GameMode)
+            switch (GameMode)
             {
                 case CowMouse.GameMode.TOWN:
                     if (WorldManager.FollowMode && WorldManager.FollowTarget != null)

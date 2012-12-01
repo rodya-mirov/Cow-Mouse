@@ -114,6 +114,7 @@
     <Compile Include="Buildings\Barrier.cs" />
     <Compile Include="Buildings\Bedroom.cs" />
     <Compile Include="Buildings\Building.cs" />
+    <Compile Include="Buildings\OccupiableZone.cs" />
     <Compile Include="Buildings\Stockpile.cs" />
     <Compile Include="InGameObjects\Carryable.cs" />
     <Compile Include="InGameObjects\InWorldObject.cs" />
@@ -121,6 +122,9 @@
     <Compile Include="InGameObjects\DebugPixel.cs" />
     <Compile Include="NPCs\NPC.cs" />
     <Compile Include="NPCs\Person.cs" />
+    <Compile Include="NPCs\Utilities\Goal.cs" />
+    <Compile Include="NPCs\Utilities\Goal_Carryable.cs" />
+    <Compile Include="NPCs\Utilities\Goal_Zone.cs" />
     <Compile Include="UserInterface\SideMenu.cs" />
     <Compile Include="CowMouseComponent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

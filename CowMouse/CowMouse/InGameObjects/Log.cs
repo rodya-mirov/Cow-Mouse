@@ -47,25 +47,6 @@ namespace CowMouse.InGameObjects
 
             isMarkedForCollection = false;
             intendedCollector = null;
-
-            determineIfInStockpile();
-        }
-
-        private void determineIfInStockpile()
-        {
-            int xSquare = FindXSquare(xPositionWorld, yPositionWorld);
-            int ySquare = FindYSquare(xPositionWorld, yPositionWorld);
-
-            foreach (Point point in Game.WorldManager.StockpilePositions)
-            {
-                if (point.X == xSquare && point.Y == ySquare)
-                {
-                    isInStockpile = true;
-                    return;
-                }
-            }
-
-            isInStockpile = false;
         }
 
         public override bool IsMarkedForCollection { get { return isMarkedForCollection; } }
@@ -102,11 +83,10 @@ namespace CowMouse.InGameObjects
             get { return true; }
         }
 
-        protected bool isInStockpile;
-
         public override bool IsInStockpile
         {
-            get { return isInStockpile; }
+            get;
+            set;
         }
         #endregion
 
@@ -183,8 +163,8 @@ namespace CowMouse.InGameObjects
         {
             if (IsBeingCarried)
             {
-                xPos = CarryingPerson.xPositionWorld;
-                yPos = CarryingPerson.yPositionWorld;
+                xPos = CarryingPerson.xPositionWorld + 1;
+                yPos = CarryingPerson.yPositionWorld + 1;
             }
         }
 

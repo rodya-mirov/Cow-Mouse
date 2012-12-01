@@ -16,7 +16,6 @@ namespace CowMouse.InGameObjects
         public virtual bool IsNPC { get { return false; } }
         #endregion
 
-
         #region Debugging Pixels
         /// <summary>
         /// These pixels are for debugging purposes; they allow one to see the

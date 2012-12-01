@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using TileEngine;
+using Microsoft.Xna.Framework;
+using CowMouse.InGameObjects;
+using CowMouse.NPCs;
 
 namespace CowMouse.Buildings
 {
     /// <summary>
     /// This is pretty much a damn stockpile.  You can pile stock on it.
     /// </summary>
-    public class Stockpile : Building
+    public class Stockpile : OccupiableZone
     {
         #region Tags
         public override bool Passable { get { return true; } }
