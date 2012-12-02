@@ -395,7 +395,7 @@ namespace CowMouse
                 else //if we just let go of a button, clear everything out
                 {
                     Dragging = false;
-                    WorldManager.MyMap.ClearOverrides();
+                    WorldManager.MyMap.ClearVisualOverrides();
 
                     unlockUserMode();
                 }
@@ -423,7 +423,7 @@ namespace CowMouse
         {
             Dragging = false;
 
-            WorldManager.MyMap.ClearOverrides();
+            WorldManager.MyMap.ClearVisualOverrides();
 
             int xmin = Math.Min(MouseClickStartSquare.X, MouseClickEndSquare.X);
             int xmax = Math.Max(MouseClickStartSquare.X, MouseClickEndSquare.X);

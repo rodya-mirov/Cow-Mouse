@@ -289,8 +289,8 @@ namespace CowMouse
         {
             base.Initialize();
 
-            defaultHighlightCell = new CowMouseMapCell(2, 0, 0);
-            defaultInvalidCell = new CowMouseMapCell(3, 0, 0);
+            defaultHighlightCell = new CowMouseMapCell(2, 0, 0, true);
+            defaultInvalidCell = new CowMouseMapCell(3, 0, 0, true);
         }
 
         protected override CowMouseTileMap makeMap()
@@ -333,7 +333,7 @@ namespace CowMouse
 
             if (visualDebugMode)
             {
-                MyMap.ClearOverrides();
+                MyMap.ClearVisualOverrides();
                 foreach (NPC npc in npcs)
                 {
                     npc.OverrideTouchedSquares(defaultHighlightCell, this);
@@ -364,7 +364,7 @@ namespace CowMouse
         /// <param name="valid"></param>
         public void SetVisualOverrides(int xmin, int ymin, int xmax, int ymax, bool valid)
         {
-            MyMap.ClearOverrides();
+            MyMap.ClearVisualOverrides();
 
             CowMouseMapCell overrideCell;
             if (valid)
@@ -376,7 +376,7 @@ namespace CowMouse
             {
                 for (int y = ymin; y <= ymax; y++)
                 {
-                    MyMap.SetOverride(overrideCell, x, y);
+                    MyMap.SetVisualOverride(overrideCell, x, y);
                 }
             }
         }
@@ -420,6 +420,23 @@ namespace CowMouse
             return true;
         }
 
+        /// <summary>
+        /// Determines if a specified pixel bounding box will collide with
+        /// any obstacles; returns true if it does, or false if not
+        /// </summary>
+        /// <param name="pixelBoundingBox"></param>
+        /// <returns></returns>
+        public bool DoesBoundingBoxTouchObstacles(InWorldObject obj)
+        {
+            foreach (Point p in obj.TouchedSquareCoordinates())
+            {
+                if (!this.MyMap.GetRealMapCell(p.X, p.Y).Passable)
+                    return true;
+            }
+
+            return false;
+        }
+
         #region Pathing assistance
         /// <summary>
         /// Determines whether one can move directly from the start square to the end square.
@@ -437,25 +454,12 @@ namespace CowMouse
         public override bool CanMoveFromSquareToSquare(int startX, int startY, int endX, int endY)
         {
             int dist = Math.Abs(startX - endX) + Math.Abs(startY - endY);
+
             if (dist != 1)
-            {
                 return false;
-            }
 
-            Point start = new Point(startX, startY);
-            Point end = new Point(endX, endY);
-
-            foreach (Building b in buildings)
-            {
-                //we're only concerned with passable buildings
-                if (b.Passable)
-                    continue;
-
-                //this is XOR; so return false if one of the points is inside the building
-                //but the other one is out of the building
-                if (b.ContainsCell(start.X, start.Y) ^ b.ContainsCell(end.X, end.Y))
-                    return false;
-            }
+            if (!this.MyMap.GetRealMapCell(endX, endY).Passable)
+                return false;
 
             return true;
         }

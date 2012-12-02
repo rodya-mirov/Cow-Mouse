@@ -79,9 +79,21 @@ namespace CowMouse.InGameObjects
         {
             foreach (Point p in this.SquareCoordinatesTouched())
             {
-                manager.MyMap.SetOverride(overrideCell, p.X, p.Y);
+                manager.MyMap.SetVisualOverride(overrideCell, p.X, p.Y);
             }
         }
         #endregion
+
+        public IEnumerable<Point> TouchedSquareCoordinates()
+        {
+            Rectangle box = this.InWorldSquareBoundingBox;
+            for (int x = box.Left; x < box.Right; x++)
+            {
+                for (int y = box.Top; y < box.Bottom; y++)
+                {
+                    yield return new Point(x, y);
+                }
+            }
+        }
     }
 }

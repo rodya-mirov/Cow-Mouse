@@ -10,7 +10,7 @@ namespace CowMouse
     {
         public override CowMouseMapCell MakeMapCell(int x, int y)
         {
-            return new CowMouseMapCell(0, x, y);
+            return new CowMouseMapCell(0, x, y, true);
         }
     }
 }

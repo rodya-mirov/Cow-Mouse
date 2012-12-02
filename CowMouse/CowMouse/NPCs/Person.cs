@@ -48,6 +48,9 @@ namespace CowMouse.NPCs
         public virtual void Inhabit()
         {
             this.IsInhabited = true;
+
+            this.remainingXMovement = 0;
+            this.remainingYMovement = 0;
         }
 
         /// <summary>
@@ -148,8 +151,10 @@ namespace CowMouse.NPCs
         }
 
         /// <summary>
-        /// Massively gross nested switch statement to turn a 2D
-        /// view direction into a 2D world direction.
+        /// Sets the Player_WorldDirection values (that is, directions in
+        /// in-world coordinates) to what they are supposed to be, based
+        /// on the Player_ViewDirection values (that is, directions on
+        /// screen, corresponding to keyboard movement).
         /// </summary>
         private void FixWorldDirection()
         {
@@ -233,25 +238,65 @@ namespace CowMouse.NPCs
             }
         }
 
-        private int PlayerKeyboardMovementSpeedStraight = 3;
-        private int PlayerKeyboardMovementSpeedDiagonal = 2;
+        private float PlayerSpeed = 3f;
+        private const float DiagonalSpeedAdjustment = .707f; //1/sqrt(2); multiply by this to get diagonal speeds :)
+
+        private float remainingXMovement = 0;
+        private float remainingYMovement = 0;
 
         /// <summary>
         /// Process player movement
         /// </summary>
         protected void DoPlayerMovement()
         {
-            int speed;
+            float speed = PlayerSpeed;
 
             if (Player_WorldHDirection != HorizontalDirection.NEUTRAL && Player_WorldVDirection != VerticalDirection.NEUTRAL)
-                speed = PlayerKeyboardMovementSpeedDiagonal;
-            else
-                speed = PlayerKeyboardMovementSpeedStraight;
+                speed *= DiagonalSpeedAdjustment;
 
-            for (int x = 0; x < speed; x++)
+            remainingXMovement += speed * (float)Player_WorldHDirection;
+            remainingYMovement += speed * (float)Player_WorldVDirection;
+
+            while (remainingXMovement <= -1)
             {
-                xPos += (int)Player_WorldHDirection;
-                yPos += (int)Player_WorldVDirection;
+                remainingXMovement++;
+                this.TryPlayerMove(-1, 0);
+            }
+
+            while (remainingXMovement >= 1)
+            {
+                remainingXMovement--;
+                this.TryPlayerMove(1, 0);
+            }
+
+            while (remainingYMovement <= -1)
+            {
+                remainingYMovement++;
+                this.TryPlayerMove(0, -1);
+            }
+
+            while (remainingYMovement >= 1)
+            {
+                remainingYMovement--;
+                this.TryPlayerMove(0, 1);
+            }
+        }
+
+        /// <summary>
+        /// Attempts to move the specified amount.
+        /// If impossible, reverts all changes.
+        /// </summary>
+        /// <param name="xChange"></param>
+        /// <param name="yChange"></param>
+        private void TryPlayerMove(int xChange, int yChange)
+        {
+            xPos += xChange;
+            yPos += yChange;
+
+            if (this.Game.WorldManager.DoesBoundingBoxTouchObstacles(this))
+            {
+                xPos -= xChange;
+                yPos -= yChange;
             }
         }
         #endregion
