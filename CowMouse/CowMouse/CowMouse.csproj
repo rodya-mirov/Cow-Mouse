@@ -124,9 +124,9 @@
     <Compile Include="InGameObjects\DebugPixel.cs" />
     <Compile Include="NPCs\NPC.cs" />
     <Compile Include="NPCs\Person.cs" />
-    <Compile Include="NPCs\Utilities\Goal.cs" />
-    <Compile Include="NPCs\Utilities\Goal_Carryable.cs" />
-    <Compile Include="NPCs\Utilities\Goal_Zone.cs" />
+    <Compile Include="NPCs\Utilities\Task.cs" />
+    <Compile Include="NPCs\Utilities\Task_Carryable.cs" />
+    <Compile Include="NPCs\Utilities\Task_Zone.cs" />
     <Compile Include="UserInterface\SideMenu.cs" />
     <Compile Include="CowMouseComponent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

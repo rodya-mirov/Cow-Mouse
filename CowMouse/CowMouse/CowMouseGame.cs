@@ -129,6 +129,7 @@ namespace CowMouse
         #endregion
 
         public CowMouseGame()
+            : base()
         {
             graphics = new GraphicsDeviceManager(this);
             preferredWindowedHeight = graphics.PreferredBackBufferHeight;

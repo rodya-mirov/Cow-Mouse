@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 
 namespace CowMouse.NPCs.Utilities
 {
-    public abstract class Goal
+    public abstract class Task
     {
         public GoalState State { get; protected set; }
         public Path Route { get; protected set; }

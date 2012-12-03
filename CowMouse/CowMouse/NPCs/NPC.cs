@@ -73,13 +73,13 @@ namespace CowMouse.NPCs
                     return Color.Yellow;
                 else
                 {
-                    if (mentalState == AIState.Sleeping_Unconscious)
+                    if (isSleeping())
                         return new Color(180, 180, 255);
 
-                    if (currentEnergy < tiredThreshold)
+                    if (isTired())
                         return Color.LightPink;
 
-                    if (currentEnergy <= 0)
+                    if (isExhausted())
                         return Color.Red;
 
                     return Color.White;
@@ -103,13 +103,13 @@ namespace CowMouse.NPCs
         #region Inhabitation
         public override void Inhabit()
         {
+            getInterrupted();
             base.Inhabit();
-            if (IsCarryingItem)
-                putDownItem(false);
         }
 
         public override void Release()
         {
+            getInterrupted();
             base.Release();
             changeMentalStateTo(AIState.Undecided);
         }
@@ -201,7 +201,7 @@ namespace CowMouse.NPCs
         /// </summary>
         private void getMoreTired()
         {
-            if (mentalState == AIState.Sleeping_Unconscious)
+            if (isSleeping())
             {
                 //if sleeping, gain energy
                 currentEnergy += 2;
@@ -240,6 +240,19 @@ namespace CowMouse.NPCs
         private bool shouldWakeUp()
         {
             return currentEnergy >= sleepUntil;
+        }
+
+        private bool isSleeping()
+        {
+            switch (mentalState)
+            {
+                case AIState.PassedOut:
+                case AIState.Sleeping_Unconscious:
+                    return true;
+
+                default:
+                    return false;
+            }
         }
         #endregion
 
@@ -366,9 +379,12 @@ namespace CowMouse.NPCs
             stateChangeActions = new Dictionary<AIState, Action<AIState>>();
 
             stateChangeActions[AIState.Undecided] = startStateNoTask;
+
             stateChangeActions[AIState.Sleeping_Thinking] = startPhase_Sleeping;
             stateChangeActions[AIState.Sleeping_GoingToBedroom] = startSubPhase_Sleeping_GoingToBedroom;
             stateChangeActions[AIState.Sleeping_Unconscious] = startSubPhase_Sleeping_Unconscious;
+
+            stateChangeActions[AIState.PassedOut] = startPhase_PassedOut;
 
             stateChangeActions[AIState.Hauling_Thinking] = startPhase_Hauling;
             stateChangeActions[AIState.Hauling_FindingResource] = startSubPhase_Hauling_FindingResource;
@@ -386,6 +402,8 @@ namespace CowMouse.NPCs
 
             pathEndActions[AIState.Sleeping_GoingToBedroom] = endOfPath_Sleeping_GoingToBedroom;
             pathEndActions[AIState.Sleeping_Unconscious] = endOfPath_Sleeping_Unconscious;
+
+            pathEndActions[AIState.PassedOut] = endOfPath_PassedOut;
 
             pathEndActions[AIState.Hauling_FindingResource] = endOfPath_Hauling_FindingResource;
             pathEndActions[AIState.Hauling_BringingResource] = endOfPath_Hauling_BringingResource;
@@ -409,6 +427,8 @@ namespace CowMouse.NPCs
             interruptedActions[AIState.Sleeping_GoingToBedroom] = interrupted_Sleeping_GoingToBedroom;
             interruptedActions[AIState.Sleeping_Unconscious] = interrupted_Sleeping_Unconscious;
 
+            interruptedActions[AIState.PassedOut] = interrupted_PassedOut;
+
             interruptedActions[AIState.Sleeping_Thinking] = interruptedThinking;
             interruptedActions[AIState.Hauling_Thinking] = interruptedThinking;
         }
@@ -423,8 +443,8 @@ namespace CowMouse.NPCs
         protected AIState mentalState = AIState.Undecided;
         protected Thread thinkingThread = null;
 
-        protected Queue<Goal> StoredGoals = new Queue<Goal>();
-        protected Goal CurrentGoal = null;
+        protected Queue<Task> StoredGoals = new Queue<Task>();
+        protected Task CurrentGoal = null;
 
         /// <summary>
         /// This is the beginning of a new action, and there's
@@ -502,7 +522,11 @@ namespace CowMouse.NPCs
                 StoredGoals.Dequeue().CleanUp();
 
             CurrentGoal = null;
+
             QueuedDestinations.Clear();
+            SetDestination(this.SquareCoordinate);
+
+            changeMentalStateTo(AIState.Undecided);
         }
 
         #region Undecided AI
@@ -581,8 +605,8 @@ namespace CowMouse.NPCs
                 return;
 
             //but now there is :)
-            Goal resourceGoal = new Goal_Carryable(validResources, this);
-            Goal stockpileGoal = new Goal_Zone<Stockpile>(validStockpiles, this);
+            Task resourceGoal = new Task_Carryable(validResources, this);
+            Task stockpileGoal = new Task_Zone<Stockpile>(validStockpiles, this);
 
             StoredGoals.Enqueue(resourceGoal);
             StoredGoals.Enqueue(stockpileGoal);
@@ -615,7 +639,7 @@ namespace CowMouse.NPCs
             }
 
             //grab the first goal, which is the "to resource" goal, and cycle the queue
-            Goal_Carryable resourceGoal = StoredGoals.Dequeue() as Goal_Carryable;
+            Task_Carryable resourceGoal = StoredGoals.Dequeue() as Task_Carryable;
             StoredGoals.Enqueue(resourceGoal);
 
             //unmark the excess and rig this goal up to go to the correct resource
@@ -631,7 +655,7 @@ namespace CowMouse.NPCs
             }
 
             //now grab the second goal, which is the "to stockpile" goal, and cycle the queue
-            Goal_Zone<Stockpile> stockpileGoal = StoredGoals.Dequeue() as Goal_Zone<Stockpile>;
+            Task_Zone<Stockpile> stockpileGoal = StoredGoals.Dequeue() as Task_Zone<Stockpile>;
             StoredGoals.Enqueue(stockpileGoal);
 
             //unmark the excess and rig the goal up!
@@ -676,7 +700,7 @@ namespace CowMouse.NPCs
                 throw new InvalidOperationException("Shouldn't be looking for resource when we're holding something?");
 
             Point myPoint = SquareCoordinate;
-            Goal_Carryable resourceGoal = CurrentGoal as Goal_Carryable;
+            Task_Carryable resourceGoal = CurrentGoal as Task_Carryable;
 
             if (resourceGoal.GoalCarryable.SquareCoordinate != myPoint)
             {
@@ -699,7 +723,7 @@ namespace CowMouse.NPCs
             if (!IsCarryingItem)
                 throw new InvalidOperationException("YOU DARE APPROACH THIS PLACE EMPTYHANDED?!");
 
-            Goal_Zone<Stockpile> stockpileGoal = CurrentGoal as Goal_Zone<Stockpile>;
+            Task_Zone<Stockpile> stockpileGoal = CurrentGoal as Task_Zone<Stockpile>;
 
             Point myPoint = SquareCoordinate;
 
@@ -755,7 +779,7 @@ namespace CowMouse.NPCs
             if (!bedroomsExist)
                 return;
 
-            Goal_Zone<Bedroom> bedroomGoal = new Goal_Zone<Bedroom>(validBedrooms, this);
+            Task_Zone<Bedroom> bedroomGoal = new Task_Zone<Bedroom>(validBedrooms, this);
             StoredGoals.Enqueue(bedroomGoal);
 
             HashSet<Point> bedroomLocations = bedroomGoal.MarkedLocations();
@@ -787,7 +811,7 @@ namespace CowMouse.NPCs
             }
 
             //Rig up the goals!
-            Goal_Zone<Bedroom> bedroomGoal = (StoredGoals.Dequeue() as Goal_Zone<Bedroom>);
+            Task_Zone<Bedroom> bedroomGoal = (StoredGoals.Dequeue() as Task_Zone<Bedroom>);
             bedroomGoal.FinishThinking(bedroomPath);
             StoredGoals.Enqueue(bedroomGoal);
 
@@ -827,7 +851,7 @@ namespace CowMouse.NPCs
         /// </summary>
         private void endOfPath_Sleeping_GoingToBedroom()
         {
-            Goal_Zone<Bedroom> bedroomGoal = CurrentGoal as Goal_Zone<Bedroom>;
+            Task_Zone<Bedroom> bedroomGoal = CurrentGoal as Task_Zone<Bedroom>;
 
             bool isInBedroom = (SquareCoordinate == bedroomGoal.End.Item1);
 
@@ -853,15 +877,9 @@ namespace CowMouse.NPCs
         {
             if (shouldWakeUp())
             {
-                //if we got here on purpose, then we're occupying
-                //a square, so unoccupy it when we wake up
-                if (CurrentGoal != null)
-                {
-                    Goal_Zone<Bedroom> bedroomGoal = CurrentGoal as Goal_Zone<Bedroom>;
-                    bedroomGoal.End.Item2.UnOccupySquare(bedroomGoal.End.Item1.X, bedroomGoal.End.Item1.Y, this);
-                }
+                Task_Zone<Bedroom> bedroomGoal = CurrentGoal as Task_Zone<Bedroom>;
+                bedroomGoal.End.Item2.UnOccupySquare(bedroomGoal.End.Item1.X, bedroomGoal.End.Item1.Y, this);
 
-                CancelAndCleanUp();
                 changeMentalStateTo(AIState.Undecided);
             }
 
@@ -875,7 +893,9 @@ namespace CowMouse.NPCs
 
         private void interrupted_Sleeping_Unconscious()
         {
-            //nothing
+            Task_Zone<Bedroom> bedroomGoal = (Task_Zone<Bedroom>)this.CurrentGoal;
+
+            bedroomGoal.End.Item2.UnOccupySquare(bedroomGoal.End.Item1.X, bedroomGoal.End.Item1.Y, this);
         }
         #endregion
 
@@ -889,7 +909,25 @@ namespace CowMouse.NPCs
             StoredGoals.Clear();
 
             //and sleep!
-            changeMentalStateTo(AIState.Sleeping_Unconscious);
+            changeMentalStateTo(AIState.PassedOut);
+        }
+
+        private void startPhase_PassedOut(AIState oldState)
+        {
+            //does nothing :)
+        }
+
+        private void endOfPath_PassedOut()
+        {
+            if (shouldWakeUp())
+            {
+                changeMentalStateTo(AIState.Undecided);
+            }
+        }
+
+        private void interrupted_PassedOut()
+        {
+            //nothing to clean up
         }
         #endregion
 
@@ -908,7 +946,10 @@ namespace CowMouse.NPCs
             //Sleeping subdivision
             Sleeping_Thinking,
             Sleeping_GoingToBedroom,
-            Sleeping_Unconscious
+            Sleeping_Unconscious, //just used for planned sleeping
+
+            //Not quite the same as sleeping :)
+            PassedOut
         }
         #endregion
     }

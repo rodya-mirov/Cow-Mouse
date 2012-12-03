@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
-using CowMouse.InGameObjects;
+using CowMouse.Buildings;
 using TileEngine.Utilities.Pathfinding;
 
 namespace CowMouse.NPCs.Utilities
 {
-    public class Goal_Carryable : Goal
+    public class Task_Zone<T> : Task
+        where T : OccupiableZone
     {
-        protected Queue<Carryable> MarkedPositions;
-        public Carryable GoalCarryable { get; protected set; }
+        protected Queue<Tuple<Point, T>> MarkedPositions;
+        public Tuple<Point, T> End { get; protected set; }
         protected NPC NPC;
 
         public override GoalType Type
@@ -24,21 +25,23 @@ namespace CowMouse.NPCs.Utilities
         /// automatically marks the associated positions, and there is no need
         /// to mark them otherwise (in fact this will result in an error!).
         /// </summary>
+        /// <param name="start"></param>
         /// <param name="potentials"></param>
         /// <param name="npc"></param>
-        public Goal_Carryable(ICollection<Carryable> potentials, NPC npc)
+        public Task_Zone(ICollection<T> potentials, NPC npc)
         {
             this.NPC = npc;
 
             this.State = GoalState.THINKING;
-            this.MarkedPositions = new Queue<Carryable>();
+            this.MarkedPositions = new Queue<Tuple<Point, T>>();
             this.Route = null;
-            this.GoalCarryable = null;
+            this.End = null;
 
-            foreach (Carryable car in potentials)
+            foreach (T zone in potentials)
             {
-                car.MarkForCollection(npc);
-                MarkedPositions.Enqueue(car);
+                Point p = zone.GetNextFreeSquare();
+                zone.MarkSquare(p.X, p.Y, npc);
+                MarkedPositions.Enqueue(new Tuple<Point, T>(p, zone));
             }
         }
 
@@ -55,9 +58,9 @@ namespace CowMouse.NPCs.Utilities
 
             HashSet<Point> output = new HashSet<Point>();
 
-            foreach (Carryable car in MarkedPositions)
+            foreach (Tuple<Point, T> pz in MarkedPositions)
             {
-                output.Add(car.SquareCoordinate);
+                output.Add(pz.Item1);
             }
 
             return output;
@@ -68,30 +71,32 @@ namespace CowMouse.NPCs.Utilities
         /// and sets up the path.
         /// </summary>
         /// <param name="point"></param>
-        /// <param name="car"></param>
+        /// <param name="zone"></param>
         public void FinishThinking(Path path)
         {
             this.Route = path;
+            Point endPoint = path.End;
+            bool hasSetGoal = false;
 
-            bool hasFoundGoal = false;
-
-            foreach (Carryable marked in MarkedPositions)
+            foreach (Tuple<Point, T> pointedZone in MarkedPositions)
             {
-                if (!hasFoundGoal && marked.SquareCoordinate == path.End)
+                if (!hasSetGoal && pointedZone.Item1 == endPoint)
                 {
-                    hasFoundGoal = true;
-                    this.GoalCarryable = marked;
+                    hasSetGoal = true;
+                    this.End = pointedZone;
                 }
                 else
                 {
-                    marked.UnMarkForCollection(this.NPC);
+                    pointedZone.Item2.UnMarkSquare(pointedZone.Item1.X, pointedZone.Item1.Y, this.NPC);
                 }
             }
 
-            if (!hasFoundGoal)
-                throw new InvalidOperationException("Why didn't we find one?");
-
             MarkedPositions = null;
+
+            this.Route = path;
+
+            if (!hasSetGoal)
+                throw new InvalidOperationException("Why didn't we find one?");
 
             this.State = GoalState.DOING;
         }
@@ -110,23 +115,27 @@ namespace CowMouse.NPCs.Utilities
         }
 
         /// <summary>
-        /// "Completes" the goal, and cleans up all the remaining marks.  Also works
+        /// Cleans up all the remaining marks.  Also works
         /// for canceling a goal at any time.
+        /// 
+        /// This also clears out all the data from the goal,
+        /// to help you not write bad code that uses this
+        /// after it's cleaned up :)
         /// </summary>
         public override void CleanUp()
         {
             switch (this.State)
             {
                 case GoalState.THINKING:
-                    foreach (Carryable car in MarkedPositions)
-                        car.UnMarkForCollection(this.NPC);
+                    foreach (Tuple<Point, T> pointedZone in MarkedPositions)
+                        pointedZone.Item2.UnMarkSquare(pointedZone.Item1.X, pointedZone.Item1.Y, NPC);
 
                     MarkedPositions = null;
                     break;
 
                 case GoalState.DOING:
-                    GoalCarryable.UnMarkForCollection(this.NPC);
-                    GoalCarryable = null;
+                    End.Item2.UnMarkSquare(End.Item1.X, End.Item1.Y, this.NPC);
+                    End = null;
                     break;
 
                 case GoalState.COMPLETE:
