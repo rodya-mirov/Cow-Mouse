@@ -116,6 +116,7 @@
     <Compile Include="Buildings\Building.cs" />
     <Compile Include="Buildings\OccupiableZone.cs" />
     <Compile Include="Buildings\Stockpile.cs" />
+    <Compile Include="ClockViewer.cs" />
     <Compile Include="CowMouseMapCell.cs" />
     <Compile Include="CowMouseTileMap.cs" />
     <Compile Include="InGameObjects\Carryable.cs" />
@@ -128,6 +129,7 @@
     <Compile Include="NPCs\Utilities\Task.cs" />
     <Compile Include="NPCs\Utilities\Task_Carryable.cs" />
     <Compile Include="NPCs\Utilities\Task_Zone.cs" />
+    <Compile Include="TimeKeeper.cs" />
     <Compile Include="UserInterface\SideMenu.cs" />
     <Compile Include="CowMouseComponent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

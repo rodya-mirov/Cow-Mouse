@@ -100,10 +100,15 @@ namespace CowMouse
         }
         #endregion
 
+        #region Time keeping
+        public TimeKeeper Clock { get; private set; }
+        #endregion
+
         public WorldManager(CowMouseGame game)
             : base(game, TileSheetPath)
         {
             this.game = game;
+            Clock = new TimeKeeper(1);
 
             buildings = new SortedSet<Building>();
             buildingQueue = new Queue<Building>();
@@ -295,35 +300,41 @@ namespace CowMouse
             Person.LoadContent(this.game);
             Log.LoadContent(this.game);
             Torch.LoadContent(this.game);
-
-            LoadTints();
         }
 
         #region Drawing Stuff
-        private static Color[] tints;
-        private static void LoadTints()
+        public Color MaxTint()
         {
-            int n = 8;
+            float max = .95f;
+            float min = .5f;
+            float range = max-min;
 
-            tints = new Color[n];
-            int amount = 255;
+            float amount;
 
-            int acc = -5;
-            int vel = -5;
-
-            for (int i = 0; i < n; i++)
+            switch (Clock.DayTime)
             {
-                tints[i] = new Color(amount, amount, amount);
-                amount += vel;
-                vel += acc;
+                case TimeOfDay.AFTERNOON:
+                case TimeOfDay.MORNING:
+                    return new Color(max, max, max);
 
-                if (amount < 0)
-                    amount = 0;
+                case TimeOfDay.NIGHT_1:
+                case TimeOfDay.NIGHT_2:
+                    return new Color(min, min, min);
+
+                case TimeOfDay.SUNRISE:
+                    amount = range * Clock.PercentageThroughCurrentPhase() + min;
+                    return new Color(amount, amount, amount);
+
+                case TimeOfDay.SUNDOWN:
+                    amount = max - range * Clock.PercentageThroughCurrentPhase();
+                    return new Color(amount, amount, amount);
+
+                default:
+                    throw new NotImplementedException();
             }
         }
 
-        //divide minimum distance by this to get the tint index
-        private const int distanceScalingFactor = 2;
+        private const int maxDist = 10;
 
         public override Color CellTint(int x, int y)
         {
@@ -337,12 +348,15 @@ namespace CowMouse
                     minDist = dist;
             }
 
-            minDist /= distanceScalingFactor;
+            if (minDist > maxDist)
+                minDist = maxDist;
 
-            if (minDist >= tints.Length)
-                minDist = tints.Length - 1;
+            float scaling = ((float)minDist) / maxDist;
 
-            return tints[minDist];
+            Vector3 maxTintVector = MaxTint().ToVector3();
+            Vector3 noTintVector = Color.White.ToVector3();
+
+            return new Color(scaling * maxTintVector + (1 - scaling) * noTintVector);
         }
         #endregion
 
@@ -362,6 +376,7 @@ namespace CowMouse
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
+            Clock.Update(gameTime);
 
             if (FollowMode)
                 Camera.CenterOnPoint(FollowTarget.xPositionDraw, FollowTarget.yPositionDraw);

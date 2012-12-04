@@ -26,6 +26,7 @@ namespace CowMouse
 
         public WorldManager WorldManager { get { return DrawComponent.WorldManager; } }
         public CowMouseComponent DrawComponent { get; private set; }
+        public ClockViewer ClockViewer { get; private set; }
 
         private FPSComponent fpsCounter { get; set; }
 
@@ -157,6 +158,7 @@ namespace CowMouse
             Tile.TileVisualOffsetY = 48;
 
             WorldManager manager = new WorldManager(this);
+
             DrawComponent = new CowMouseComponent(this, manager);
             DrawComponent.Enabled = true;
             DrawComponent.Visible = true;
@@ -169,6 +171,10 @@ namespace CowMouse
             fpsCounter = new FPSComponent(this);
             fpsCounter.Visible = false;
             Components.Add(fpsCounter);
+
+            ClockViewer = new CowMouse.ClockViewer(manager.Clock, this);
+            ClockViewer.Visible = true;
+            Components.Add(ClockViewer);
 
             setupKeyBindings();
 
@@ -223,8 +229,9 @@ namespace CowMouse
 
             SpriteFont font = Content.Load<SpriteFont>("Fonts/Segoe");
 
-            fpsCounter.Font = font;
+            this.fpsCounter.Font = font;
             this.SideMenu.Font = font;
+            this.ClockViewer.Font = font;
 
             this.IsMouseVisible = true;
         }
