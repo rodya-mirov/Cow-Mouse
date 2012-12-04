@@ -84,6 +84,13 @@ namespace CowMouse.InGameObjects
         }
         #endregion
 
+        protected WorldManager WorldManager { get; set; }
+
+        public InWorldObject(WorldManager manager)
+        {
+            this.WorldManager = manager;
+        }
+
         public IEnumerable<Point> TouchedSquareCoordinates()
         {
             Rectangle box = this.InWorldSquareBoundingBox;

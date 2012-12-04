@@ -28,6 +28,7 @@ namespace CowMouse
 
         private Queue<Person> npcs;
         private Queue<Carryable> carryables;
+        private Queue<Torch> torches;
 
         private Queue<DebugPixel> pixels;
         private bool visualDebugMode = false;
@@ -127,6 +128,12 @@ namespace CowMouse
 
             Console.WriteLine("NPCed");
 
+            torches = new Queue<Torch>();
+            torches.Enqueue(new Torch(0, 0, this));
+            torches.Enqueue(new Torch(5, 0, this));
+            torches.Enqueue(new Torch(0, 5, this));
+            torches.Enqueue(new Torch(5, 5, this));
+
             if (visualDebugMode)
             {
                 foreach (NPC npc in npcs)
@@ -134,6 +141,8 @@ namespace CowMouse
                     foreach (DebugPixel p in npc.BoundingPixels(game))
                         pixels.Enqueue(p);
                 }
+
+                Console.WriteLine("Pixeled!");
             }
         }
 
@@ -144,11 +153,10 @@ namespace CowMouse
             for (int i = 0; i < numPeople; i++)
             {
                 NPC npc = new NPC(
-                    game,
                     r.Next(numPeople * 2 + 1) - numPeople,
                     r.Next(numPeople * 2 + 1) - numPeople,
                     true,
-                    this.MyMap
+                    this
                     );
 
                 npcs.Enqueue(npc);
@@ -190,7 +198,7 @@ namespace CowMouse
                 }
 
                 placed.Add(p);
-                carryables.Enqueue(new Log(game, x, y - x, true, this.MyMap));
+                carryables.Enqueue(new Log(x, y - x, true, this));
             }
         }
         #endregion
@@ -205,6 +213,9 @@ namespace CowMouse
 
             foreach (NPC obj in npcs)
                 yield return obj;
+
+            foreach (Torch torch in torches)
+                yield return torch;
 
             foreach (DebugPixel p in pixels)
                 yield return p;
@@ -283,6 +294,7 @@ namespace CowMouse
 
             Person.LoadContent(this.game);
             Log.LoadContent(this.game);
+            Torch.LoadContent(this.game);
         }
 
         public override void Initialize()

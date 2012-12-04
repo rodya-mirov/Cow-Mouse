@@ -8,6 +8,11 @@ namespace CowMouse.InGameObjects
 {
     public abstract class Carryable : InWorldObject
     {
+        public Carryable(WorldManager manager)
+            : base(manager)
+        {
+        }
+
         /// <summary>
         /// Returns true if this object can currently be picked up.
         /// </summary>

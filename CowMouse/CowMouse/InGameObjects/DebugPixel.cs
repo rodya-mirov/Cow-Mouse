@@ -17,7 +17,7 @@ namespace CowMouse.InGameObjects
         private InWorldObject parent;
 
         public DebugPixel(int xOffset, int yOffset, CowMouseGame game, Color c, InWorldObject parent)
-            : base()
+            : base(game.WorldManager)
         {
             this.xOffset = xOffset;
             this.yOffset = yOffset;

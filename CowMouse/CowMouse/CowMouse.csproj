@@ -122,6 +122,7 @@
     <Compile Include="InGameObjects\InWorldObject.cs" />
     <Compile Include="InGameObjects\Log.cs" />
     <Compile Include="InGameObjects\DebugPixel.cs" />
+    <Compile Include="InGameObjects\Torch.cs" />
     <Compile Include="NPCs\NPC.cs" />
     <Compile Include="NPCs\Person.cs" />
     <Compile Include="NPCs\Utilities\Task.cs" />

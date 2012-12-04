@@ -11,11 +11,10 @@ namespace CowMouse.InGameObjects
 {
     public class Log : Carryable
     {
-        protected CowMouseGame Game { get; set; }
         protected int xPos { get; set; }
         protected int yPos { get; set; }
 
-        protected CowMouseTileMap Map { get; set; }
+        protected CowMouseTileMap Map { get { return WorldManager.MyMap; } }
 
         #region Carrying business
         protected bool isBeingCarried;
@@ -105,10 +104,9 @@ namespace CowMouse.InGameObjects
         /// <param name="yCoordinate"></param>
         /// <param name="usingTileCoordinates">True if x,y are referring to SQUARES, or False if they are in-world "pixels"</param>
         /// <param name="map"></param>
-        public Log(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, CowMouseTileMap map)
+        public Log(int xCoordinate, int yCoordinate, bool usingTileCoordinates, WorldManager manager)
+            : base(manager)
         {
-            this.Game = game;
-
             if (usingTileCoordinates)
             {
                 this.xPos = xCoordinate * Tile.TileInGameWidth + Tile.TileInGameWidthHalf;
@@ -119,8 +117,6 @@ namespace CowMouse.InGameObjects
                 this.xPos = xCoordinate;
                 this.yPos = yCoordinate;
             }
-
-            this.Map = map;
         }
 
         public static void LoadContent(Game game)

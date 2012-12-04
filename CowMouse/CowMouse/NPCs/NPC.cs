@@ -87,8 +87,8 @@ namespace CowMouse.NPCs
             }
         }
 
-        public NPC(CowMouseGame game, int xCoordinate, int yCoordinate, bool usingTileCoordinates, CowMouseTileMap map)
-            : base(game, xCoordinate, yCoordinate, usingTileCoordinates, map)
+        public NPC(int xCoordinate, int yCoordinate, bool usingTileCoordinates, WorldManager manager)
+            : base(xCoordinate, yCoordinate, usingTileCoordinates, manager)
         {
             thinkingThread = null;
 
@@ -155,7 +155,7 @@ namespace CowMouse.NPCs
         /// <returns></returns>
         private IEnumerable<Point> positionsMarkedForCollection()
         {
-            foreach (Carryable car in Game.WorldManager.Carryables)
+            foreach (Carryable car in WorldManager.Carryables)
             {
                 if (car.IsMarkedForCollection && car.IntendedCollector == this)
                     yield return car.SquareCoordinate;
@@ -306,7 +306,7 @@ namespace CowMouse.NPCs
             foreach (Point next in QueuedDestinations)
             {
                 if (current != next &&
-                    !Game.WorldManager.CanMoveFromSquareToSquare(current.X, current.Y, next.X, next.Y))
+                    !WorldManager.CanMoveFromSquareToSquare(current.X, current.Y, next.X, next.Y))
                 {
                     return false;
                 }
@@ -577,7 +577,7 @@ namespace CowMouse.NPCs
             bool validResourcesExist = false;
             HashSet<Carryable> validResources = new HashSet<Carryable>();
 
-            foreach (Carryable car in Game.WorldManager.Carryables)
+            foreach (Carryable car in WorldManager.Carryables)
             {
                 if (isValidForHauling(car))
                 {
@@ -590,7 +590,7 @@ namespace CowMouse.NPCs
             bool validStockpilesExist = false;
             HashSet<Stockpile> validStockpiles = new HashSet<Stockpile>();
 
-            foreach (Stockpile pile in Game.WorldManager.Stockpiles)
+            foreach (Stockpile pile in WorldManager.Stockpiles)
             {
                 if (pile.HasFreeSquare())
                 {
@@ -630,7 +630,7 @@ namespace CowMouse.NPCs
             Path pathToResources = null;
             Path pathToStockpile = null;
 
-            pathToResources = PathHunter.GetPath(SquareCoordinate, resourceLocations, DefaultSearchDepth, Game.WorldManager, this.lastUpdateTime);
+            pathToResources = PathHunter.GetPath(SquareCoordinate, resourceLocations, DefaultSearchDepth, WorldManager, this.lastUpdateTime);
 
             if (pathToResources == null)
             {
@@ -646,7 +646,7 @@ namespace CowMouse.NPCs
             resourceGoal.FinishThinking(pathToResources);
 
             //now find the next path
-            pathToStockpile = PathHunter.GetPath(pathToResources.End, stockpileLocations, DefaultSearchDepth, Game.WorldManager, this.lastUpdateTime);
+            pathToStockpile = PathHunter.GetPath(pathToResources.End, stockpileLocations, DefaultSearchDepth, WorldManager, this.lastUpdateTime);
 
             if (pathToStockpile == null)
             {
@@ -765,7 +765,7 @@ namespace CowMouse.NPCs
             bool bedroomsExist = false;
             HashSet<Bedroom> validBedrooms = new HashSet<Bedroom>();
 
-            foreach (Bedroom bedroom in Game.WorldManager.Bedrooms)
+            foreach (Bedroom bedroom in WorldManager.Bedrooms)
             {
                 if (bedroom.HasFreeSquare())
                 {
@@ -802,7 +802,7 @@ namespace CowMouse.NPCs
         /// <param name="destinations"></param>
         private void startPhase_Sleeping_ThreadHelper(HashSet<Point> destinations)
         {
-            Path bedroomPath = PathHunter.GetPath(SquareCoordinate, destinations, DefaultSearchDepth, Game.WorldManager, lastUpdateTime);
+            Path bedroomPath = PathHunter.GetPath(SquareCoordinate, destinations, DefaultSearchDepth, WorldManager, lastUpdateTime);
 
             if (bedroomPath == null)
             {
