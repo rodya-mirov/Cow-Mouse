@@ -203,6 +203,7 @@ namespace CowMouse
         }
         #endregion
 
+        #region Enumerators and Accessors
         /// <summary>
         /// The list of ingameobjects for the purpose of updating, etc.
         /// </summary>
@@ -221,7 +222,6 @@ namespace CowMouse
                 yield return p;
         }
 
-        #region Enumerators and Accessors
         /// <summary>
         /// Enumerates all the carryables in the world.
         /// 
@@ -295,7 +295,56 @@ namespace CowMouse
             Person.LoadContent(this.game);
             Log.LoadContent(this.game);
             Torch.LoadContent(this.game);
+
+            LoadTints();
         }
+
+        #region Drawing Stuff
+        private static Color[] tints;
+        private static void LoadTints()
+        {
+            int n = 8;
+
+            tints = new Color[n];
+            int amount = 255;
+
+            int acc = -5;
+            int vel = -5;
+
+            for (int i = 0; i < n; i++)
+            {
+                tints[i] = new Color(amount, amount, amount);
+                amount += vel;
+                vel += acc;
+
+                if (amount < 0)
+                    amount = 0;
+            }
+        }
+
+        //divide minimum distance by this to get the tint index
+        private const int distanceScalingFactor = 2;
+
+        public override Color CellTint(int x, int y)
+        {
+            int minDist = int.MaxValue;
+
+            foreach (Torch t in torches)
+            {
+                Point p = t.SquareCoordinate;
+                int dist = Math.Abs(p.X - x) + Math.Abs(p.Y - y);
+                if (dist < minDist)
+                    minDist = dist;
+            }
+
+            minDist /= distanceScalingFactor;
+
+            if (minDist >= tints.Length)
+                minDist = tints.Length - 1;
+
+            return tints[minDist];
+        }
+        #endregion
 
         public override void Initialize()
         {
