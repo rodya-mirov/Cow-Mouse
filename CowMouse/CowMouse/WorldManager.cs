@@ -108,7 +108,7 @@ namespace CowMouse
             : base(game, TileSheetPath)
         {
             this.game = game;
-            Clock = new TimeKeeper(1);
+            Clock = new TimeKeeper(10);
 
             buildings = new SortedSet<Building>();
             buildingQueue = new Queue<Building>();
@@ -300,6 +300,7 @@ namespace CowMouse
             Person.LoadContent(this.game);
             Log.LoadContent(this.game);
             Torch.LoadContent(this.game);
+            CowMouseTileMap.LoadContent(this.game);
         }
 
         #region Drawing Stuff
@@ -334,24 +335,30 @@ namespace CowMouse
             }
         }
 
-        private const int maxDist = 10;
+        private const float maxAmp = 1.5f;
+        private const float minAmp = 0;
+        private const float ampRange = maxAmp - minAmp;
 
         public override Color CellTint(int x, int y)
         {
-            int minDist = int.MaxValue;
+            float amplitude = 0;
 
             foreach (Torch t in torches)
             {
                 Point p = t.SquareCoordinate;
-                int dist = Math.Abs(p.X - x) + Math.Abs(p.Y - y);
-                if (dist < minDist)
-                    minDist = dist;
+
+                float dx = Math.Abs(p.X - x);
+                float dy = Math.Abs(p.Y - y);
+
+                amplitude += t.AmountOfLight / (dx * dx + dy * dy);
             }
 
-            if (minDist > maxDist)
-                minDist = maxDist;
+            if (amplitude > maxAmp)
+                amplitude = maxAmp;
+            if (amplitude < minAmp)
+                amplitude = minAmp;
 
-            float scaling = ((float)minDist) / maxDist;
+            float scaling = 1 - (amplitude - minAmp) / ampRange;
 
             Vector3 maxTintVector = MaxTint().ToVector3();
             Vector3 noTintVector = Color.White.ToVector3();

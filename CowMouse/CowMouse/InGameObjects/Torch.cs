@@ -9,6 +9,8 @@ namespace CowMouse.InGameObjects
 {
     public class Torch : InWorldObject
     {
+        public float AmountOfLight { get { return 10; } }
+
         public override int xPositionWorld { get { return xPosition; } }
         public override int yPositionWorld { get { return yPosition; } }
 
