@@ -20,8 +20,8 @@ namespace CowMouse.NPCs
         protected int yPos { get; set; }
         protected CowMouseTileMap Map { get { return WorldManager.MyMap; } }
 
-        protected static Texture2D townsManTexture { get; set; }
-        protected const string townsManTexturePath = @"Images\NPCs\TownsMan";
+        protected static Texture2D[] townsManTextures { get; set; }
+        protected int textureIndex { get; set; }
 
         private const int xDrawOffset = 31; //the true center of this thing is about 31 pixels right of xPos
         private const int yDrawOffset = 49; //the true center of this thing is about 49 pixels down of yPos
@@ -85,7 +85,18 @@ namespace CowMouse.NPCs
 
             this.QueuedDestinations = new Queue<Point>();
             this.HasDestination = false;
+
+            pickRandomTextureIndex();
         }
+
+        #region Texture indices
+        private static int nextTexture = 0;
+        private void pickRandomTextureIndex()
+        {
+            nextTexture = (nextTexture + 1) % 3;
+            this.textureIndex = nextTexture;
+        }
+        #endregion
 
         protected GameTime lastUpdateTime;
 
@@ -311,8 +322,10 @@ namespace CowMouse.NPCs
         /// <param name="game"></param>
         public static void LoadContent(Game game)
         {
-            if (townsManTexture == null)
-                townsManTexture = game.Content.Load<Texture2D>(townsManTexturePath);
+            townsManTextures = new Texture2D[3];
+            townsManTextures[0] = game.Content.Load<Texture2D>(@"Images\NPCs\TownsMan1");
+            townsManTextures[1] = game.Content.Load<Texture2D>(@"Images\NPCs\TownsMan2");
+            townsManTextures[2] = game.Content.Load<Texture2D>(@"Images\NPCs\TownsWoman1");
 
             sources = new Rectangle[4];
 
@@ -351,7 +364,7 @@ namespace CowMouse.NPCs
 
         public override Texture2D Texture
         {
-            get { return townsManTexture; }
+            get { return townsManTextures[textureIndex]; }
         }
         #endregion
 

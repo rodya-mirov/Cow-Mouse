@@ -9,7 +9,17 @@ namespace CowMouse.InGameObjects
 {
     public class Torch : InWorldObject
     {
-        public float AmountOfLight { get { return 10; } }
+        #region Light Amount
+        public float AmountOfLight { get; protected set; }
+        private const float MaxLight = 10;
+        private const float MinLight = 8;
+        private const float LightRange = MaxLight - MinLight;
+
+        private float lightChange;
+        private const float MaxChange = 0.06f;
+        private const float MinChange = 0.04f;
+        private const float ChangeRange = MaxChange - MinChange;
+        #endregion
 
         public override int xPositionWorld { get { return xPosition; } }
         public override int yPositionWorld { get { return yPosition; } }
@@ -66,6 +76,9 @@ namespace CowMouse.InGameObjects
             this.yPosition = base.FindYCoordinate(xSquare, ySquare);
 
             sourceIndex = ran.Next(4);
+
+            AmountOfLight = MinLight + ((float)ran.NextDouble()) * LightRange;
+            lightChange = MinChange + ((float)ran.NextDouble()) * ChangeRange;
         }
 
         public static void LoadContent(Game game)
@@ -82,6 +95,18 @@ namespace CowMouse.InGameObjects
         public override void Update(GameTime gameTime)
         {
             updateSourceIndex();
+
+            AmountOfLight += lightChange;
+            if (AmountOfLight >= MaxLight)
+            {
+                AmountOfLight = MaxLight;
+                lightChange = -Math.Abs(lightChange);
+            }
+            else if (AmountOfLight <= MinLight)
+            {
+                AmountOfLight = MinLight;
+                lightChange = Math.Abs(lightChange);
+            }
         }
     }
 }

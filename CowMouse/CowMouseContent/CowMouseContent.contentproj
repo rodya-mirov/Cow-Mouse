@@ -63,8 +63,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Images\NPCs\TownsMan.png">
-      <Name>TownsMan</Name>
+    <Compile Include="Images\NPCs\TownsMan1.png">
+      <Name>TownsMan1</Name>
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
     </Compile>
@@ -79,6 +79,20 @@
   <ItemGroup>
     <Compile Include="Images\Objects\Torch.png">
       <Name>Torch</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Images\NPCs\TownsMan2.png">
+      <Name>TownsMan2</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Images\NPCs\TownsWoman1.png">
+      <Name>TownsWoman1</Name>
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
     </Compile>

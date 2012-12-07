@@ -29,6 +29,12 @@ Town Mode
 > 3. Owning rooms instead of just piling up
 > 4. Crafting (generally)?
 
+3. NPCs given more attributes
+> 1. Names, randomly generated from Markov chains, or just from a premade list
+> 2. Gender
+> 3. Adventurer-type attributes (health/str/etc.)
+> 4. All should be displayed on follow.
+
 Adventure Mode
 --------------
 
@@ -38,7 +44,7 @@ Graphics
 --------
 
 1. 8-directional sprites, where necessary
-2. More human sprite types (e.g. women, children, and eventually some professions with specific sprites).
+2. More human sprite types (e.g. children, and eventually some professions with specific sprites).
 
 World
 -----

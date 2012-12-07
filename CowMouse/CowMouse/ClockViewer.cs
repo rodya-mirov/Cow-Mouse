@@ -10,9 +10,38 @@ namespace CowMouse
     public class ClockViewer : DrawableGameComponent
     {
         private TimeKeeper Clock { get; set; }
-        public SpriteFont Font { get; set; }
 
-        private Vector2 drawPosition { get; set; }
+        private SpriteFont font;
+        public SpriteFont Font
+        {
+            get { return font; }
+            set
+            {
+                font = value;
+                FixTextSize();
+            }
+        }
+
+        private Vector2 TextSize { get; set; }
+        private void FixTextSize()
+        {
+            String testString = TimeKeeper.TestString;
+            TextSize = Font.MeasureString(testString);
+        }
+
+        private Vector2 drawPosition
+        {
+            get
+            {
+                float x, y;
+
+                x = Game.Window.ClientBounds.Width - TextSize.X - 30;
+                y = Game.Window.ClientBounds.Height - TextSize.Y - 20;
+
+                return new Vector2((int)x, (int)y);
+            }
+        }
+
         private SpriteBatch batch { get; set; }
 
         public ClockViewer(TimeKeeper keeper, CowMouseGame game)
@@ -21,7 +50,6 @@ namespace CowMouse
             this.Clock = keeper;
             this.Visible = true;
 
-            drawPosition = new Vector2(100, 100);
             batch = new SpriteBatch(game.GraphicsDevice);
         }
 

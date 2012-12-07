@@ -121,6 +121,14 @@ namespace CowMouse
         }
         #endregion
 
+        /// <summary>
+        /// A sample string for measurement/sizing purposes.
+        /// </summary>
+        public static String TestString
+        {
+            get { return "Current Time: 12:12"; }
+        }
+
         public override String ToString()
         {
             return "Current Time: " + Hours.ToString("00") + ":" + Minutes.ToString("00");
