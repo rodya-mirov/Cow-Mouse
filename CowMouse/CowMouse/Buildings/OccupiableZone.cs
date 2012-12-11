@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using CowMouse.InGameObjects;
 using Microsoft.Xna.Framework;
+using CowMouse.Tasks;
 
 namespace CowMouse.Buildings
 {
@@ -20,7 +21,7 @@ namespace CowMouse.Buildings
         protected SquareState[,] squareStates;
         protected Dictionary<SquareState, int> stateCounts;
 
-        protected InWorldObject[,] markers;
+        protected FullTask[,] markers;
         protected InWorldObject[,] occupants;
 
         /// <summary>
@@ -50,7 +51,7 @@ namespace CowMouse.Buildings
 
             stateCounts[SquareState.FREE] = Area;
 
-            markers = new InWorldObject[Width, Height];
+            markers = new FullTask[Width, Height];
             occupants = new InWorldObject[Width, Height];
         }
 
@@ -116,6 +117,16 @@ namespace CowMouse.Buildings
         }
 
         /// <summary>
+        /// Determines if the specified square is free.
+        /// </summary>
+        /// <param name="worldPoint"></param>
+        /// <returns></returns>
+        public bool IsSquareFree(Point worldPoint)
+        {
+            return IsSquareFree(worldPoint.X, worldPoint.Y);
+        }
+
+        /// <summary>
         /// Determines if the specified square is marked.
         /// </summary>
         /// <param name="worldX"></param>
@@ -127,6 +138,16 @@ namespace CowMouse.Buildings
         }
 
         /// <summary>
+        /// Determines if the specified square is marked.
+        /// </summary>
+        /// <param name="worldPoint"></param>
+        /// <returns></returns>
+        public bool IsSquareMarked(Point worldPoint)
+        {
+            return IsSquareMarked(worldPoint.X, worldPoint.Y);
+        }
+
+        /// <summary>
         /// Determines whether the specified square is marked,
         /// and if so, whether it's marked by the supplied object.
         /// </summary>
@@ -134,10 +155,22 @@ namespace CowMouse.Buildings
         /// <param name="worldY"></param>
         /// <param name="marker"></param>
         /// <returns></returns>
-        public bool IsSquareMarkedBy(int worldX, int worldY, InWorldObject marker)
+        public bool IsSquareMarkedBy(int worldX, int worldY, FullTask marker)
         {
             return IsSquareMarked(worldX, worldY) &&
                 this.markers[worldX - XMin, worldY - YMin] == marker;
+        }
+
+        /// <summary>
+        /// Determines whether the specified square is marked,
+        /// and if so, whether it's marked by the supplied object.
+        /// </summary>
+        /// <param name="worldPoint"></param>
+        /// <param name="marker"></param>
+        /// <returns></returns>
+        public bool IsSquareMarkedBy(Point worldPoint, FullTask marker)
+        {
+            return this.IsSquareMarkedBy(worldPoint.X, worldPoint.Y, marker);
         }
 
         /// <summary>
@@ -149,6 +182,16 @@ namespace CowMouse.Buildings
         public bool IsSquareOccupied(int worldX, int worldY)
         {
             return squareStates[worldX - XMin, worldY - YMin] == SquareState.OCCUPIED;
+        }
+
+        /// <summary>
+        /// Determines if the specified square is occupied.
+        /// </summary>
+        /// <param name="worldPoint"></param>
+        /// <returns></returns>
+        public bool IsSquareOccupied(Point worldPoint)
+        {
+            return IsSquareOccupied(worldPoint.X, worldPoint.Y);
         }
 
         /// <summary>
@@ -166,13 +209,25 @@ namespace CowMouse.Buildings
         }
 
         /// <summary>
+        /// Determines whether the specified square is occupied,
+        /// and if so, whether it's occupied by the supplied object.
+        /// </summary>
+        /// <param name="worldPoint"></param>
+        /// <param name="occupant"></param>
+        /// <returns></returns>
+        public bool IsSquareOccupiedBy(Point worldPoint, InWorldObject occupant)
+        {
+            return IsSquareOccupiedBy(worldPoint.X, worldPoint.Y, occupant);
+        }
+
+        /// <summary>
         /// Returns the marker of the specified square.
         /// Throws a fit if the square is not marked.
         /// </summary>
         /// <param name="worldX"></param>
         /// <param name="worldY"></param>
         /// <returns></returns>
-        public InWorldObject Marker(int worldX, int worldY)
+        public FullTask Marker(int worldX, int worldY)
         {
             int x = worldX - XMin;
             int y = worldY - YMin;
@@ -181,6 +236,17 @@ namespace CowMouse.Buildings
                 throw new InvalidOperationException("Square is not marked!");
 
             return markers[x, y];
+        }
+
+        /// <summary>
+        /// Returns the marker of the specified square.
+        /// Throws a fit if the square is not marked.
+        /// </summary>
+        /// <param name="worldPoint"></param>
+        /// <returns></returns>
+        public FullTask Marker(Point worldPoint)
+        {
+            return Marker(worldPoint.X, worldPoint.Y);
         }
 
         /// <summary>
@@ -202,12 +268,23 @@ namespace CowMouse.Buildings
         }
 
         /// <summary>
+        /// Returns the occupant of the specified square.
+        /// Throws a fit if the square is not occupied.
+        /// </summary>
+        /// <param name="worldPoint"></param>
+        /// <returns></returns>
+        public InWorldObject Occupant(Point worldPoint)
+        {
+            return Occupant(worldPoint.X, worldPoint.Y);
+        }
+
+        /// <summary>
         /// Marks a specific square as "taken" by the person of interest.
         /// </summary>
         /// <param name="worldX"></param>
         /// <param name="worldY"></param>
         /// <param name="marker"></param>
-        public void MarkSquare(int worldX, int worldY, InWorldObject marker)
+        public void MarkSquare(int worldX, int worldY, FullTask marker)
         {
             int x = worldX - XMin;
             int y = worldY - YMin;
@@ -221,6 +298,16 @@ namespace CowMouse.Buildings
         }
 
         /// <summary>
+        /// Marks a specific square as "taken" by the person of interest.
+        /// </summary>
+        /// <param name="worldPoint"></param>
+        /// <param name="marker"></param>
+        public void MarkSquare(Point worldPoint, FullTask marker)
+        {
+            this.MarkSquare(worldPoint.X, worldPoint.Y, marker);
+        }
+
+        /// <summary>
         /// Unmarks the specified square.  Throws the usual invalidoperation fits
         /// when the arguments are wrong, in addition to a new fit if the supplied
         /// object isn't the one who marked it in the first place.
@@ -228,7 +315,7 @@ namespace CowMouse.Buildings
         /// <param name="worldX"></param>
         /// <param name="worldY"></param>
         /// <param name="marker"></param>
-        public void UnMarkSquare(int worldX, int worldY, InWorldObject marker)
+        public void UnMarkSquare(int worldX, int worldY, FullTask marker)
         {
             int x = worldX - XMin;
             int y = worldY - YMin;
@@ -243,13 +330,26 @@ namespace CowMouse.Buildings
         }
 
         /// <summary>
+        /// Unmarks the specified square.  Throws the usual invalidoperation fits
+        /// when the arguments are wrong, in addition to a new fit if the supplied
+        /// object isn't the one who marked it in the first place.
+        /// </summary>
+        /// <param name="worldPoint"></param>
+        /// <param name="marker"></param>
+        public void UnMarkSquare(Point worldPoint, FullTask marker)
+        {
+            this.UnMarkSquare(worldPoint.X, worldPoint.Y, marker);
+        }
+
+        /// <summary>
         /// Occupies the specified square.  Throws a fit when it's not marked,
         /// or if the specified marker is not the marker we recognized.
         /// </summary>
         /// <param name="worldX"></param>
         /// <param name="worldY"></param>
+        /// <param name="marker"></param>
         /// <param name="occupant"></param>
-        public void OccupySquare(int worldX, int worldY, InWorldObject marker, InWorldObject occupant)
+        public void OccupySquare(int worldX, int worldY, FullTask marker, InWorldObject occupant)
         {
             if (!IsSquareMarkedBy(worldX, worldY, marker))
                 throw new InvalidOperationException("Gotta mark it before you can use it!");
@@ -259,6 +359,18 @@ namespace CowMouse.Buildings
 
             SetSquareState(worldX, worldY, SquareState.OCCUPIED);
             occupants[x, y] = occupant;
+        }
+
+        /// <summary>
+        /// Occupies the specified square.  Throws a fit when it's not marked,
+        /// or if the specified marker is not the marker we recognized.
+        /// </summary>
+        /// <param name="worldPoint"></param>
+        /// <param name="marker"></param>
+        /// <param name="occupant"></param>
+        public void OccupySquare(Point worldPoint, FullTask marker, InWorldObject occupant)
+        {
+            this.OccupySquare(worldPoint.X, worldPoint.Y, marker, occupant);
         }
 
         /// <summary>
@@ -279,6 +391,18 @@ namespace CowMouse.Buildings
 
             SetSquareState(worldX, worldY, SquareState.FREE);
             occupants[x, y] = null;
+        }
+
+        /// <summary>
+        /// Sets the specified square as unoccupied.  Throws a fit unless the
+        /// square is currently occupied and the specified argument is the one
+        /// sitting there.
+        /// </summary>
+        /// <param name="worldPoint"></param>
+        /// <param name="occupant"></param>
+        public void UnOccupySquare(Point worldPoint, InWorldObject occupant)
+        {
+            this.UnOccupySquare(worldPoint.X, worldPoint.Y, occupant);
         }
 
         /// <summary>

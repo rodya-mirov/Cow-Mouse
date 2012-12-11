@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using CowMouse.InGameObjects;
 using CowMouse.Utilities;
+using TileEngine.Utilities.Pathfinding;
 
 namespace CowMouse.NPCs
 {
@@ -48,8 +49,7 @@ namespace CowMouse.NPCs
         {
             this.IsInhabited = true;
 
-            this.remainingXMovement = 0;
-            this.remainingYMovement = 0;
+            this.remainingMovement = 0;
         }
 
         /// <summary>
@@ -83,9 +83,6 @@ namespace CowMouse.NPCs
                 this.yPos = yCoordinate;
             }
 
-            this.QueuedDestinations = new Queue<Point>();
-            this.HasDestination = false;
-
             pickRandomTextureIndex();
         }
 
@@ -110,7 +107,7 @@ namespace CowMouse.NPCs
             }
             else
             {
-                aiUpdate();
+                aiUpdate(time);
             }
         }
 
@@ -240,16 +237,37 @@ namespace CowMouse.NPCs
                     throw new NotImplementedException();
             }
 
-            if (Player_ViewHDirection != HorizontalDirection.NEUTRAL || Player_ViewVDirection != VerticalDirection.NEUTRAL)
+            FixSourceRectangleInhabited();
+        }
+
+        private void FixSourceRectangleInhabited()
+        {
+            if (Player_WorldHDirection == HorizontalDirection.LEFT)
             {
+                if (Player_WorldVDirection == VerticalDirection.NEUTRAL)
+                    sourceIndex = 2;
+            }
+            else if (Player_WorldHDirection == HorizontalDirection.RIGHT)
+            {
+                if (Player_WorldVDirection == VerticalDirection.NEUTRAL)
+                    sourceIndex = 1;
+            }
+            else if (Player_WorldVDirection == VerticalDirection.UP)
+            {
+                if (Player_WorldHDirection == HorizontalDirection.NEUTRAL)
+                    sourceIndex = 0;
+            }
+            else if (Player_WorldVDirection == VerticalDirection.DOWN)
+            {
+                if (Player_WorldHDirection == HorizontalDirection.NEUTRAL)
+                    sourceIndex = 3;
             }
         }
 
-        private float PlayerSpeed = 3f;
+        private float PlayerSpeed = 2f;
         private const float DiagonalSpeedAdjustment = .707f; //1/sqrt(2); multiply by this to get diagonal speeds :)
 
-        private float remainingXMovement = 0;
-        private float remainingYMovement = 0;
+        private float remainingMovement = 0;
 
         /// <summary>
         /// Process player movement
@@ -261,31 +279,14 @@ namespace CowMouse.NPCs
             if (Player_WorldHDirection != HorizontalDirection.NEUTRAL && Player_WorldVDirection != VerticalDirection.NEUTRAL)
                 speed *= DiagonalSpeedAdjustment;
 
-            remainingXMovement += speed * (float)Player_WorldHDirection;
-            remainingYMovement += speed * (float)Player_WorldVDirection;
+            remainingMovement += speed;
 
-            while (remainingXMovement <= -1)
+            while (remainingMovement >= 1)
             {
-                remainingXMovement++;
-                this.TryPlayerMove(-1, 0);
-            }
+                remainingMovement--;
 
-            while (remainingXMovement >= 1)
-            {
-                remainingXMovement--;
-                this.TryPlayerMove(1, 0);
-            }
-
-            while (remainingYMovement <= -1)
-            {
-                remainingYMovement++;
-                this.TryPlayerMove(0, -1);
-            }
-
-            while (remainingYMovement >= 1)
-            {
-                remainingYMovement--;
-                this.TryPlayerMove(0, 1);
+                this.TryPlayerMove((int)Player_WorldHDirection, 0);
+                this.TryPlayerMove(0, (int)Player_WorldVDirection);
             }
         }
 
@@ -313,7 +314,7 @@ namespace CowMouse.NPCs
         /// This is the main method that extensions will have to override.
         /// This is what the Person will do when left to its own devices.
         /// </summary>
-        protected abstract void aiUpdate();
+        protected abstract void aiUpdate(GameTime gametime);
 
         #region Drawing
         /// <summary>
@@ -369,9 +370,9 @@ namespace CowMouse.NPCs
         #endregion
 
         #region Path following
-        protected bool HasDestination;
+        protected bool HasDestination = false;
         protected Point CurrentDestination;
-        protected Queue<Point> QueuedDestinations;
+        protected Queue<Point> QueuedDestinations = new Queue<Point>();
 
         /// <summary>
         /// Move one "in-game pixel" toward the current destination.
@@ -417,7 +418,7 @@ namespace CowMouse.NPCs
         }
 
         /// <summary>
-        /// Sets the current destination to a specified TILE coordinate.
+        /// Sets the current destination to a specified SQUARE coordinate.
         /// </summary>
         /// <param name="xSquare"></param>
         /// <param name="ySquare"></param>
@@ -430,12 +431,57 @@ namespace CowMouse.NPCs
         }
 
         /// <summary>
-        /// Sets the current destination to a specified TILE coordinate.
+        /// Sets the current destination to a specified SQUARE coordinate.
         /// </summary>
-        /// <param name="tilePoint"></param>
-        protected void SetDestination(Point tilePoint)
+        /// <param name="squareCoordinate"></param>
+        protected void SetDestination(Point squareCoordinate)
         {
-            SetDestination(tilePoint.X, tilePoint.Y);
+            SetDestination(squareCoordinate.X, squareCoordinate.Y);
+        }
+
+        /// <summary>
+        /// Sets the QueuedDestinations to be the queue of Points in a path.
+        /// </summary>
+        /// <param name="path"></param>
+        protected void LoadPathIntoQueuedDestinations(Path path)
+        {
+            QueuedDestinations.Clear();
+
+            foreach (Point p in path.PointsTraveled())
+                QueuedDestinations.Enqueue(p);
+        }
+
+        /// <summary>
+        /// Whether or not this Person should continue along the current
+        /// path.  The default behavior is just to follow it when this is
+        /// possible.
+        /// </summary>
+        /// <returns></returns>
+        protected virtual bool ShouldFollowPath()
+        {
+            if (HasDestination)
+                return true;
+
+            if (QueuedDestinations.Count > 0)
+                return true;
+
+            return false;
+        }
+
+        protected void FollowPath()
+        {
+            if (HasDestination)
+            {
+                MoveTowardDestination();
+            }
+            else if (QueuedDestinations.Count > 0)
+            {
+                SetDestination(QueuedDestinations.Dequeue());
+            }
+            else
+            {
+                throw new NotImplementedException("What did you want, exactly?  I've got no path to follow!");
+            }
         }
         #endregion
     }

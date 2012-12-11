@@ -8,6 +8,8 @@ using Microsoft.Xna.Framework.Input;
 using CowMouse.NPCs;
 using CowMouse.Buildings;
 using CowMouse.InGameObjects;
+using System.Threading;
+using CowMouse.Tasks;
 
 namespace CowMouse
 {
@@ -31,7 +33,6 @@ namespace CowMouse
         private Queue<Torch> torches;
 
         private Queue<DebugPixel> pixels;
-        private bool visualDebugMode = false;
 
         public new CowMouseGame game { get; set; }
 
@@ -116,6 +117,25 @@ namespace CowMouse
             makeStartingInWorldObjects();
         }
 
+        public override void Initialize()
+        {
+            base.Initialize();
+
+            defaultHighlightCell = new CowMouseMapCell(2, 0, 0, true);
+            defaultInvalidCell = new CowMouseMapCell(3, 0, 0, true);
+        }
+
+        public override void LoadContent()
+        {
+            base.LoadContent();
+
+            Person.LoadContent(this.game);
+            Log.LoadContent(this.game);
+            Torch.LoadContent(this.game);
+
+            CowMouseTileMap.LoadContent(this.game);
+        }
+
         #region Starting Object Creation
         private void makeStartingInWorldObjects()
         {
@@ -138,17 +158,6 @@ namespace CowMouse
             torches.Enqueue(new Torch(5, 0, this));
             torches.Enqueue(new Torch(0, 5, this));
             torches.Enqueue(new Torch(5, 5, this));
-
-            if (visualDebugMode)
-            {
-                foreach (NPC npc in npcs)
-                {
-                    foreach (DebugPixel p in npc.BoundingPixels(game))
-                        pixels.Enqueue(p);
-                }
-
-                Console.WriteLine("Pixeled!");
-            }
         }
 
         private void makeRandomNPCs(int numPeople)
@@ -293,17 +302,12 @@ namespace CowMouse
         }
         #endregion
 
-        public override void LoadContent()
-        {
-            base.LoadContent();
-
-            Person.LoadContent(this.game);
-            Log.LoadContent(this.game);
-            Torch.LoadContent(this.game);
-            CowMouseTileMap.LoadContent(this.game);
-        }
-
         #region Drawing Stuff
+        /// <summary>
+        /// Determines the maximum tint of any (sufficiently well-lit) square.
+        /// Depends on the time of day.
+        /// </summary>
+        /// <returns></returns>
         public Color MaxTint()
         {
             float max = .95f;
@@ -335,10 +339,17 @@ namespace CowMouse
             }
         }
 
-        private const float maxAmp = 1.5f;
-        private const float minAmp = 0;
-        private const float ampRange = maxAmp - minAmp;
+        private const float maxAmplitude = 1.5f;
+        private const float minAmplitude = 0;
+        private const float amplitudeRange = maxAmplitude - minAmplitude;
 
+        /// <summary>
+        /// This determines the active tint on the specified cell.
+        /// For now, this is used for lighting.
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
         public override Color CellTint(int x, int y)
         {
             float amplitude = 0;
@@ -353,84 +364,17 @@ namespace CowMouse
                 amplitude += t.AmountOfLight / (dx * dx + dy * dy);
             }
 
-            if (amplitude > maxAmp)
-                amplitude = maxAmp;
-            if (amplitude < minAmp)
-                amplitude = minAmp;
+            if (amplitude > maxAmplitude)
+                amplitude = maxAmplitude;
+            if (amplitude < minAmplitude)
+                amplitude = minAmplitude;
 
-            float scaling = 1 - (amplitude - minAmp) / ampRange;
+            float scaling = 1 - (amplitude - minAmplitude) / amplitudeRange;
 
             Vector3 maxTintVector = MaxTint().ToVector3();
             Vector3 noTintVector = Color.White.ToVector3();
 
             return new Color(scaling * maxTintVector + (1 - scaling) * noTintVector);
-        }
-        #endregion
-
-        public override void Initialize()
-        {
-            base.Initialize();
-
-            defaultHighlightCell = new CowMouseMapCell(2, 0, 0, true);
-            defaultInvalidCell = new CowMouseMapCell(3, 0, 0, true);
-        }
-
-        protected override CowMouseTileMap makeMap()
-        {
-            return new CowMouseTileMap();
-        }
-
-        public override void Update(GameTime gameTime)
-        {
-            base.Update(gameTime);
-            Clock.Update(gameTime);
-
-            if (FollowMode)
-                Camera.CenterOnPoint(FollowTarget.xPositionDraw, FollowTarget.yPositionDraw);
-
-            foreach (Building building in buildings)
-                building.Update(gameTime);
-
-            if (buildingQueue.Count > 0)
-            {
-                SortedSet<Building> newBuildings = new SortedSet<Building>();
-
-                bool newWalls = false;
-
-                foreach (Building b in buildings)
-                {
-                    newBuildings.Add(b);
-                    if (!b.Passable)
-                        newWalls = true;
-                }
-
-                foreach (Building b in buildingQueue)
-                    newBuildings.Add(b);
-
-                buildingQueue.Clear();
-                this.buildings = newBuildings;
-
-                if (newWalls)
-                    this.PassabilityMadeHarder(gameTime);
-            }
-
-            if (visualDebugMode)
-            {
-                MyMap.ClearVisualOverrides();
-                foreach (NPC npc in npcs)
-                {
-                    npc.OverrideTouchedSquares(defaultHighlightCell, this);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Adds the specified building to the list of buildings.
-        /// </summary>
-        /// <param name="building"></param>
-        public void addBuilding(Building building)
-        {
-            buildingQueue.Enqueue(building);
         }
 
         /// <summary>
@@ -463,6 +407,204 @@ namespace CowMouse
                 }
             }
         }
+        #endregion
+
+        protected override CowMouseTileMap makeMap()
+        {
+            return new CowMouseTileMap();
+        }
+
+        public override void Update(GameTime gameTime)
+        {
+            base.Update(gameTime);
+            Clock.Update(gameTime);
+
+            if (FollowMode)
+                Camera.CenterOnPoint(FollowTarget.xPositionDraw, FollowTarget.yPositionDraw);
+
+            foreach (Building building in buildings)
+                building.Update(gameTime);
+
+            if (!IsThinking)
+                AddTask();
+
+            if (buildingQueue.Count > 0)
+                AddQueuedBuildings();
+
+            if (queuedTasks.Count > 0)
+                AddQueuedTasks();
+        }
+
+        #region Adding Buildings
+        /// <summary>
+        /// Adds the specified building to the world.
+        /// </summary>
+        /// <param name="building"></param>
+        public void addBuilding(Building building)
+        {
+            buildingQueue.Enqueue(building);
+        }
+
+        /// <summary>
+        /// Call when the building queue is nonempty, at the proper time.
+        /// This loads the new buildings into the world, and if that makes
+        /// passability easier or harder, updates this fact.
+        /// </summary>
+        /// <param name="gameTime"></param>
+        private void AddQueuedBuildings()
+        {
+            SortedSet<Building> newBuildings = new SortedSet<Building>();
+
+            bool newWalls = false;
+
+            foreach (Building b in buildings)
+            {
+                newBuildings.Add(b);
+                if (!b.Passable)
+                    newWalls = true;
+            }
+
+            foreach (Building b in buildingQueue)
+                newBuildings.Add(b);
+
+            buildingQueue.Clear();
+            this.buildings = newBuildings;
+
+            if (newWalls)
+                this.PassabilityMadeHarder(this.currentTime);
+        }
+        #endregion
+
+        #region Task manager
+        private const int DEFAULT_SEARCH_DEPTH = 300;
+        private const int HAULING_PRIORITY = 100;
+
+        private TaskHeap availableTasks = new TaskHeap();
+        private Queue<FullTask> queuedTasks = new Queue<FullTask>();
+
+        /// <summary>
+        /// Determines whether there are any tasks that need to get done.
+        /// </summary>
+        /// <returns></returns>
+        public bool HasAvailableTasks()
+        {
+            return availableTasks.Count > 0;
+        }
+
+        /// <summary>
+        /// Returns the highest priority task and removes it from
+        /// the available task heap.
+        /// </summary>
+        /// <returns></returns>
+        public FullTask TakeAvailableTask()
+        {
+            FullTask output = availableTasks.Pop();
+            return output;
+        }
+
+        /// <summary>
+        /// Gives up on a task; returns it to the list of available
+        /// tasks.
+        /// </summary>
+        /// <param name="task"></param>
+        public void ReturnTaskUnfinished(FullTask task)
+        {
+            queuedTasks.Enqueue(task);
+        }
+
+        private Thread thinkingThread = null;
+        private bool IsThinking { get { return thinkingThread != null; } }
+
+        /// <summary>
+        /// Starts the thinking thread
+        /// </summary>
+        private void StartThinkingThread()
+        {
+            //there could conceivably be more to this at some point
+            thinkingThread.Start();
+        }
+
+        /// <summary>
+        /// Ends the thinking thread; actually this is
+        /// the ending OF the thinking thread.  Stores any
+        /// new tasks and loses the reference to the thinking
+        /// thread.
+        /// </summary>
+        private void EndOfThinkingThread()
+        {
+            thinkingThread = null;
+        }
+
+        /// <summary>
+        /// Adds in the queued tasks into the pile of
+        /// available tasks (in a thread-safe way).
+        /// </summary>
+        private void AddQueuedTasks()
+        {
+            TaskHeap newTaskHeap = new TaskHeap();
+            foreach (FullTask taskList in availableTasks)
+                newTaskHeap.Add(taskList);
+
+            foreach (FullTask newTask in queuedTasks)
+                newTaskHeap.Add(newTask);
+
+            queuedTasks.Clear();
+            availableTasks = newTaskHeap;
+        }
+
+        /// <summary>
+        /// Loads up a task, if possible.  Does most of the work
+        /// in the thinkingThread.
+        /// </summary>
+        private void AddTask()
+        {
+            if (HaulingTaskPossible())
+            {
+                thinkingThread = new Thread(() => makeHaulingTask_ThreadHelper());
+                StartThinkingThread();
+            }
+        }
+
+        private void makeHaulingTask_ThreadHelper()
+        {
+            FullTask haulingTask = PartialTask.MakeHaulingGoal(this, DEFAULT_SEARCH_DEPTH, this.currentTime, HAULING_PRIORITY);
+            if (haulingTask != null)
+                queuedTasks.Enqueue(haulingTask);
+
+            EndOfThinkingThread();
+        }
+
+        /// <summary>
+        /// Determines whether we should attempt to add a Hauling
+        /// task to the task heap.
+        /// </summary>
+        /// <returns></returns>
+        private bool HaulingTaskPossible()
+        {
+            bool resourceExists = false;
+            bool stockpileExists = false;
+
+            foreach (Carryable car in this.Carryables)
+            {
+                if (car.ShouldBeMarkedForHauling)
+                {
+                    resourceExists = true;
+                    break;
+                }
+            }
+
+            foreach (Stockpile pile in this.Stockpiles)
+            {
+                if (pile.HasFreeSquare())
+                {
+                    stockpileExists = true;
+                    break;
+                }
+            }
+
+            return resourceExists && stockpileExists;
+        }
+        #endregion
 
         /// <summary>
         /// Determines whether the box has positive area.
@@ -511,7 +653,7 @@ namespace CowMouse
         /// <returns></returns>
         public bool DoesBoundingBoxTouchObstacles(InWorldObject obj)
         {
-            foreach (Point p in obj.TouchedSquareCoordinates())
+            foreach (Point p in obj.SquareCoordinatesTouched())
             {
                 if (!this.MyMap.GetRealMapCell(p.X, p.Y).Passable)
                     return true;

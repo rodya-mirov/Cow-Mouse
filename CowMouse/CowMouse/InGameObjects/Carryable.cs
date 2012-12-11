@@ -28,7 +28,7 @@ namespace CowMouse.InGameObjects
         /// is current carrying this object.  Output is undefined
         /// when IsBeingCarried is set to false.
         /// </summary>
-        protected abstract InGameObject CarryingPerson { get; }
+        protected abstract InWorldObject CarryingPerson { get; }
 
         /// <summary>
         /// Get picked up.  Should assume CanBePickedUp is set to true,
@@ -39,7 +39,7 @@ namespace CowMouse.InGameObjects
         /// unless something nonstandard is happening (traps or whatever?)
         /// </summary>
         /// <param name="picker"></param>
-        public abstract void GetPickedUp(InGameObject picker);
+        public abstract void GetPickedUp(InWorldObject picker);
 
         /// <summary>
         /// Get put down.  Should assume IsBeingCarried is set to true,
@@ -64,20 +64,32 @@ namespace CowMouse.InGameObjects
         /// the method starts.
         /// </summary>
         /// <param name="collector"></param>
-        public abstract void MarkForCollection(InGameObject collector);
+        public abstract void MarkForCollection(Tasks.FullTask collectingTask);
 
         /// <summary>
         /// Like MarkForCollection, but backwards.
         /// </summary>
         /// <param name="collector"></param>
-        public abstract void UnMarkForCollection(InGameObject collector);
+        public abstract void UnMarkForCollection(Tasks.FullTask collectingTask);
 
         /// <summary>
         /// Returns the current object which is intending to collect
         /// this object.  Undefined behavior when IsMarkedForCollection
         /// is false.
         /// </summary>
-        public abstract InGameObject IntendedCollector { get; }
+        public abstract Tasks.FullTask IntendedCollector { get; }
+
+        /// <summary>
+        /// Whether or not this resource is a good idea to mark for
+        /// hauling.
+        /// </summary>
+        public bool ShouldBeMarkedForHauling
+        {
+            get
+            {
+                return IsResource && !IsInStockpile && !IsBeingCarried && !IsMarkedForCollection;
+            }
+        }
 
         #region Tags
         /// <summary>

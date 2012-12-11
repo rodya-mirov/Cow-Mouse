@@ -126,9 +126,9 @@
     <Compile Include="InGameObjects\Torch.cs" />
     <Compile Include="NPCs\NPC.cs" />
     <Compile Include="NPCs\Person.cs" />
-    <Compile Include="NPCs\Utilities\Task.cs" />
-    <Compile Include="NPCs\Utilities\Task_Carryable.cs" />
-    <Compile Include="NPCs\Utilities\Task_Zone.cs" />
+    <Compile Include="Tasks\PartialTask.cs" />
+    <Compile Include="Tasks\TaskHeap.cs" />
+    <Compile Include="Tasks\FullTask.cs" />
     <Compile Include="TimeKeeper.cs" />
     <Compile Include="UserInterface\SideMenu.cs" />
     <Compile Include="CowMouseComponent.cs" />
@@ -136,7 +136,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="CowMouseGame.cs" />
     <Compile Include="UserInterface\SideMenuButton.cs" />
-    <Compile Include="Utilities\Direction.cs" />
+    <Compile Include="InGameObjects\Utilities\Direction.cs" />
     <Compile Include="WorldManager.cs" />
   </ItemGroup>
   <ItemGroup>

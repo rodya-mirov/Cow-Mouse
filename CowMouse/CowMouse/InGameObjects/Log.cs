@@ -6,6 +6,7 @@ using TileEngine;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using CowMouse.Buildings;
+using CowMouse.Tasks;
 
 namespace CowMouse.InGameObjects
 {
@@ -18,22 +19,24 @@ namespace CowMouse.InGameObjects
 
         #region Carrying business
         protected bool isBeingCarried;
-        protected InGameObject carryingPerson;
+        protected InWorldObject carryingPerson;
 
         protected bool isMarkedForCollection;
-        protected InGameObject intendedCollector;
+        protected FullTask intendedCollector;
 
         public override bool CanBePickedUp { get { return !IsBeingCarried; } }
         public override bool IsBeingCarried { get { return isBeingCarried; } }
-        protected override InGameObject CarryingPerson { get { return carryingPerson; } }
+        protected override InWorldObject CarryingPerson { get { return carryingPerson; } }
 
-        public override void GetPickedUp(InGameObject picker)
+        public override void GetPickedUp(InWorldObject picker)
         {
             if (!CanBePickedUp)
                 throw new InvalidOperationException("Can't be picked up right now.");
 
             isBeingCarried = true;
             carryingPerson = picker;
+
+            IsInStockpile = false;
         }
 
         public override void GetPutDown()
@@ -49,9 +52,9 @@ namespace CowMouse.InGameObjects
         }
 
         public override bool IsMarkedForCollection { get { return isMarkedForCollection; } }
-        public override InGameObject IntendedCollector { get { return intendedCollector; } }
+        public override FullTask IntendedCollector { get { return intendedCollector; } }
 
-        public override void MarkForCollection(InGameObject collector)
+        public override void MarkForCollection(FullTask collector)
         {
             if (isMarkedForCollection)
                 throw new InvalidOperationException("This is already marked for collection!");
@@ -63,7 +66,7 @@ namespace CowMouse.InGameObjects
             intendedCollector = collector;
         }
 
-        public override void UnMarkForCollection(InGameObject collector)
+        public override void UnMarkForCollection(FullTask collector)
         {
             if (!isMarkedForCollection)
                 throw new InvalidOperationException("Can't unmark what wasn't marked!");

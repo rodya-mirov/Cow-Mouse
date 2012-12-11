@@ -11,16 +11,17 @@ namespace CowMouse
     {
         public static void LoadContent(CowMouseGame game)
         {
+            baseTiles = new int[] { 20, 21, 22, 23 };
         }
 
-        //the tiles I've made for grass are 20, 21, 22, 23
-        private const int numTiles = 4;
-        private const int startTile = 20;
+        protected override bool UseCaching { get { return false; } }
+
+        private static int[] baseTiles;
 
         public override CowMouseMapCell MakeMapCell(int x, int y)
         {
             Random ran = new Random(makeSeed(x, y));
-            int baseTile = ran.Next(numTiles) + startTile;
+            int baseTile = baseTiles[ran.Next(baseTiles.Length)];
             return new CowMouseMapCell(baseTile, x, y, true);
         }
 
