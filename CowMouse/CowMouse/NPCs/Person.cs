@@ -370,8 +370,21 @@ namespace CowMouse.NPCs
         #endregion
 
         #region Path following
+        /// <summary>
+        /// Whether or not the person is currently aiming at a particular square.
+        /// </summary>
         protected bool HasDestination = false;
+
+        /// <summary>
+        /// The current coordinate this Person is going to.
+        /// This is in PIXEL coordinates!
+        /// </summary>
         protected Point CurrentDestination;
+
+        /// <summary>
+        /// The path of coordinates that this Person intends to follow.
+        /// These are in SQUARE coordinates!
+        /// </summary>
         protected Queue<Point> QueuedDestinations = new Queue<Point>();
 
         /// <summary>
@@ -431,6 +444,49 @@ namespace CowMouse.NPCs
         }
 
         /// <summary>
+        /// This checks if the stored path actually makes sense.
+        /// If so, it doesn't change anything.
+        /// If not, it clears ALL the stored destinations (not just
+        /// the ones that don't make sense), so that pathing will
+        /// stop as soon as the Person reaches the next full square).
+        /// </summary>
+        protected void VerifyOrClearPath()
+        {
+            //"from point A to point B"
+            Point A, B;
+
+            if (HasDestination)
+            {
+                A.X = FindXSquare(CurrentDestination.X, CurrentDestination.Y);
+                A.Y = FindYSquare(CurrentDestination.X, CurrentDestination.Y);
+            }
+            else
+            {
+                A = SquareCoordinate;
+            }
+
+            bool foundProblem = false;
+
+            foreach (Point newPoint in QueuedDestinations)
+            {
+                B = newPoint;
+
+                if ((A != B) && (!this.WorldManager.CanMoveFromSquareToSquare(A.X, A.Y, B.X, B.Y)))
+                {
+                    foundProblem = true;
+                    break;
+                }
+
+                A = B;
+            }
+
+            if (foundProblem)
+            {
+                QueuedDestinations.Clear();
+            }
+        }
+
+        /// <summary>
         /// Sets the current destination to a specified SQUARE coordinate.
         /// </summary>
         /// <param name="squareCoordinate"></param>
@@ -452,12 +508,10 @@ namespace CowMouse.NPCs
         }
 
         /// <summary>
-        /// Whether or not this Person should continue along the current
-        /// path.  The default behavior is just to follow it when this is
-        /// possible.
+        /// Determines whether there is a path to follow!
         /// </summary>
         /// <returns></returns>
-        protected virtual bool ShouldFollowPath()
+        protected bool HasMorePath()
         {
             if (HasDestination)
                 return true;

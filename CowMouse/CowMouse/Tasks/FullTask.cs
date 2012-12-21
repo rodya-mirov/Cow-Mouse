@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework;
 
 namespace CowMouse.Tasks
 {
-    public class FullTask
+    public abstract class FullTask
     {
         /// <summary>
         /// Lower means better!
@@ -17,8 +17,7 @@ namespace CowMouse.Tasks
         {
             this.Priority = Priority;
 
-            this.Tasks = new List<PartialTask>();
-            this.currentTaskIndex = 0;
+            this.Tasks = new List<TaskStep>();
         }
 
         /// <summary>
@@ -31,24 +30,36 @@ namespace CowMouse.Tasks
 
         /// <summary>
         /// This sets IsFrozen to true.  If it was already
-        /// frozen, this throws a fit.
+        /// frozen, this throws a fit.  This also verifies
+        /// that the task is well-formed.
         /// </summary>
         public void Freeze()
         {
+            if (!VerifyWellFormed())
+                throw new InvalidOperationException("This task is made improperly!");
+
             if (IsFrozen)
                 throw new InvalidOperationException("Already done!");
 
             IsFrozen = true;
         }
 
-        protected List<PartialTask> Tasks;
-        protected int currentTaskIndex;
+        protected List<TaskStep> Tasks;
+        protected int currentTaskIndex = -1;
 
-        public bool HasMoreTasks { get { return currentTaskIndex < Tasks.Count; } }
+        /// <summary>
+        /// Whether or not there is another step after the current one.
+        /// </summary>
+        public bool HasMoreTasks { get { return currentTaskIndex < Tasks.Count - 1; } }
 
-        public PartialTask GetNextTask()
+        /// <summary>
+        /// This returns the next task, and internally, updates the pointer to current task
+        /// </summary>
+        /// <returns></returns>
+        public TaskStep GetNextTask()
         {
-            return Tasks[currentTaskIndex++];
+            currentTaskIndex++;
+            return Tasks[currentTaskIndex];
         }
 
         public Point StartPoint { get { return Tasks[0].StartPoint; } }
@@ -58,7 +69,7 @@ namespace CowMouse.Tasks
         /// Does not work after the task has been frozen!
         /// </summary>
         /// <param name="task"></param>
-        public void AddNewTask(PartialTask task)
+        public void AddNewTask(TaskStep task)
         {
             if (IsFrozen)
                 throw new InvalidOperationException("Can't add a new task now!");
@@ -72,8 +83,29 @@ namespace CowMouse.Tasks
         /// </summary>
         public void CleanUpAllTasks()
         {
-            foreach (PartialTask task in this.Tasks)
+            foreach (TaskStep task in this.Tasks)
                 task.CleanUp();
         }
+
+        /// <summary>
+        /// This indicates that the person who was doing this task
+        /// has given up on it.  Frequently this is because it is
+        /// impossible.  The default behavior here is just to mark the
+        /// task as "complete" (or just finished) by moving the source
+        /// index, and doing cleanup on all tasks.
+        /// </summary>
+        public virtual void GiveUp()
+        {
+            CleanUpAllTasks();
+            this.currentTaskIndex = this.Tasks.Count - 1;
+        }
+
+        /// <summary>
+        /// Checks to make sure that the task is well-formed, in that
+        /// it has all the right pieces in the right order, and so
+        /// forth.  Means different things for different task types.
+        /// </summary>
+        /// <returns></returns>
+        protected abstract bool VerifyWellFormed();
     }
 }

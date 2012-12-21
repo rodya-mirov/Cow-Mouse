@@ -34,15 +34,22 @@ namespace CowMouse.NPCs
         {
             if (IsThinking)
             {
-                //just relax bro
+                //just hang out and think :)
+                return;
             }
-            else if (ShouldFollowPath())
+
+            VerifyOrClearPath();
+
+            if (HasMorePath())
             {
                 FollowPath();
             }
             else if (HasPartialTask)
             {
-                CompletePartialTask();
+                if (this.SquareCoordinate == this.currentPartialTask.EndPoint)
+                    CompletePartialTask();
+                else
+                    CancelCurrentTask();
             }
             else if (HasMainTask)
             {
@@ -97,7 +104,7 @@ namespace CowMouse.NPCs
         private FullTask currentMainTask = null;
         private bool HasMainTask { get { return currentMainTask != null; } }
 
-        private PartialTask currentPartialTask = null;
+        private TaskStep currentPartialTask = null;
         private bool HasPartialTask { get { return currentPartialTask != null; } }
 
         private void SetCurrentTask(FullTask mainTask, Path pathToStartPoint)
@@ -109,6 +116,20 @@ namespace CowMouse.NPCs
             currentMainTask = mainTask;
         }
 
+        private void CancelCurrentTask()
+        {
+            if (!HasMainTask || !HasPartialTask)
+                throw new NotImplementedException("I honestly don't know what to do here, but it shouldn't happen yet?");
+
+            if (IsCarryingItem)
+                DropCarriedItem();
+
+            currentPartialTask = null;
+            currentMainTask.GiveUp();
+
+            currentMainTask = null;
+        }
+
         private void CompletePartialTask()
         {
             switch (currentPartialTask.Type)
@@ -118,7 +139,7 @@ namespace CowMouse.NPCs
                     break;
 
                 case TaskType.PUT_DOWN:
-                    PutDownCarriedItem(currentPartialTask.WhereToPlace);
+                    PutCarriedItemInStockpile(currentPartialTask.WhereToPlace);
                     break;
 
                 default:
@@ -158,12 +179,23 @@ namespace CowMouse.NPCs
                 throw new InvalidOperationException("It's so far away!  I can't reach it!");
         }
 
-        private void PutDownCarriedItem(OccupiableZone zone)
+        private void DropCarriedItem()
+        {
+            if (!IsCarryingItem)
+                throw new InvalidOperationException("How do I drop *nothing*?");
+
+            CarriedItem.GetPutDown();
+            CarriedItem.IsInStockpile = false;
+
+            CarriedItem = null;
+        }
+
+        private void PutCarriedItemInStockpile(OccupiableZone stockpile)
         {
             if (!IsCarryingItem)
                 throw new InvalidOperationException("How do I put *nothing* in this stockpile?");
 
-            zone.OccupySquare(SquareCoordinate, currentMainTask, CarriedItem);
+            stockpile.OccupySquare(SquareCoordinate, currentMainTask, CarriedItem);
 
             CarriedItem.GetPutDown();
             CarriedItem.IsInStockpile = true;

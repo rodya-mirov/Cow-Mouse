@@ -121,8 +121,8 @@ namespace CowMouse
         {
             base.Initialize();
 
-            defaultHighlightCell = new CowMouseMapCell(2, 0, 0, true);
-            defaultInvalidCell = new CowMouseMapCell(3, 0, 0, true);
+            defaultHighlightCell = new CowMouseMapCell(2, true);
+            defaultInvalidCell = new CowMouseMapCell(3, true);
         }
 
         public override void LoadContent()
@@ -142,18 +142,19 @@ namespace CowMouse
             Console.WriteLine("Setting up world ...");
 
             carryables = new Queue<Carryable>();
+            npcs = new Queue<Person>();
+            pixels = new Queue<DebugPixel>();
+            torches = new Queue<Torch>();
+
             int radius = 30;
             makeRandomLogs(radius, -radius, radius, -radius, radius);
 
             Console.WriteLine("Logged");
 
-            npcs = new Queue<Person>();
-            pixels = new Queue<DebugPixel>();
             makeRandomNPCs(10);
 
             Console.WriteLine("NPCed");
 
-            torches = new Queue<Torch>();
             torches.Enqueue(new Torch(0, 0, this));
             torches.Enqueue(new Torch(5, 0, this));
             torches.Enqueue(new Torch(0, 5, this));
@@ -312,7 +313,7 @@ namespace CowMouse
         {
             float max = .95f;
             float min = .5f;
-            float range = max-min;
+            float range = max - min;
 
             float amount;
 
@@ -567,7 +568,7 @@ namespace CowMouse
 
         private void makeHaulingTask_ThreadHelper()
         {
-            FullTask haulingTask = PartialTask.MakeHaulingGoal(this, DEFAULT_SEARCH_DEPTH, this.currentTime, HAULING_PRIORITY);
+            FullTask haulingTask = TaskStep.MakeHaulingGoal(this, DEFAULT_SEARCH_DEPTH, this.currentTime, HAULING_PRIORITY);
             if (haulingTask != null)
                 queuedTasks.Enqueue(haulingTask);
 

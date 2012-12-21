@@ -21,6 +21,9 @@ namespace CowMouse
     /// </summary>
     public class CowMouseGame : Microsoft.Xna.Framework.Game
     {
+        //for debugging purposes: this sets the speed to go just as fast as it damn well can
+        private bool stupidHyperMode = false;
+
         public GraphicsDeviceManager graphics { get; private set; }
         public SpriteBatch spriteBatch { get; private set; }
 
@@ -43,6 +46,7 @@ namespace CowMouse
 
         //scrollin
         private int KeyboardMoveSpeed = 2;
+
 
         #region Game Mode
         private GameMode gameMode;
@@ -177,6 +181,13 @@ namespace CowMouse
             Components.Add(ClockViewer);
 
             setupKeyBindings();
+
+            if (stupidHyperMode)
+            {
+                this.IsFixedTimeStep = false;
+                this.graphics.SynchronizeWithVerticalRetrace = false;
+                this.graphics.ApplyChanges();
+            }
 
             base.Initialize();
         }

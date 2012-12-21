@@ -11,18 +11,24 @@ namespace CowMouse
     {
         public static void LoadContent(CowMouseGame game)
         {
-            baseTiles = new int[] { 20, 21, 22, 23 };
+            int[] baseTileCodes = new int[] { 20, 21, 22, 23 };
+
+            baseTiles = new CowMouseMapCell[baseTileCodes.Length];
+
+            for (int i = 0; i < baseTileCodes.Length; i++)
+            {
+                baseTiles[i] = new CowMouseMapCell(baseTileCodes[i], true);
+            }
         }
 
-        protected override bool UseCaching { get { return false; } }
+        protected override bool UseCaching { get { return true; } }
 
-        private static int[] baseTiles;
+        private static CowMouseMapCell[] baseTiles;
 
         public override CowMouseMapCell MakeMapCell(int x, int y)
         {
             Random ran = new Random(makeSeed(x, y));
-            int baseTile = baseTiles[ran.Next(baseTiles.Length)];
-            return new CowMouseMapCell(baseTile, x, y, true);
+            return baseTiles[ran.Next(baseTiles.Length)];
         }
 
         private int makeSeed(int x, int y)

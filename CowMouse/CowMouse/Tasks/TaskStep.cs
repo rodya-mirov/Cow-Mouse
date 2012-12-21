@@ -19,34 +19,19 @@ namespace CowMouse.Tasks
     /// should be non-null; others are probably (but not guaranteed
     /// to be) non-null.
     /// </summary>
-    public class PartialTask
+    public abstract class TaskStep
     {
-        private PartialTask(Path path, FullTask parentList, TaskType type)
+        protected TaskStep(Path path, FullTask parentList, TaskType type)
         {
             this.ParentList = parentList;
             this.Type = type;
-
             this.Path = path;
-
-            this.StartPoint = path.Start;
-            this.EndPoint = path.End;
-        }
-
-        private PartialTask(Point onlyPoint, FullTask parentList, TaskType type)
-        {
-            this.ParentList = parentList;
-            this.Type = type;
-
-            this.Path = null;
-
-            this.StartPoint = onlyPoint;
-            this.EndPoint = onlyPoint;
         }
 
         public FullTask ParentList { get; private set; }
 
-        public virtual Point StartPoint { get; private set; }
-        public virtual Point EndPoint { get; private set; }
+        public abstract Point StartPoint { get; }
+        public abstract Point EndPoint { get; }
 
         /// <summary>
         /// If not null, follow the path first.
@@ -55,15 +40,20 @@ namespace CowMouse.Tasks
         /// </summary>
         public Path Path { get; private set; }
 
-        public TaskType Type { get; private set; }
+        /// <summary>
+        /// The type of task we're doing.  This
+        /// should inform the action necessary.
+        /// </summary>
+        public TaskType Type { get; protected set; }
 
-        public Carryable ToPickUp { get; private set; }
-        public OccupiableZone WhereToPlace { get; private set; }
+        public Carryable ToPickUp { get; protected set; }
+        public OccupiableZone WhereToPlace { get; protected set; }
 
-        public void CleanUp()
-        {
-            throw new NotImplementedException();
-        }
+        /// <summary>
+        /// Does any cleanup left to do.  Should be able to be safely
+        /// called more than once!
+        /// </summary>
+        public abstract void CleanUp();
 
         #region FullTask Makers
         /// <summary>
@@ -77,7 +67,7 @@ namespace CowMouse.Tasks
         /// <returns></returns>
         public static FullTask MakeHaulingGoal(WorldManager manager, int searchDepth, GameTime currentTime, int priority)
         {
-            FullTask outputTaskList = new FullTask(priority);
+            FullTask outputTaskList = new HaulingTask(priority);
 
             HashSet<Point> resourceLocations = new HashSet<Point>();
             HashSet<Tuple<Point, Carryable>> markedResources = new HashSet<Tuple<Point, Carryable>>();
@@ -143,7 +133,7 @@ namespace CowMouse.Tasks
                     throw new InvalidOperationException();
 
                 //now make that task up!
-                PartialTask pickupTask = new PartialTask(toPickUp.Item1, outputTaskList, TaskType.PICK_UP);
+                TaskStep pickupTask = new PickupStep(null, outputTaskList, toPickUp.Item2);
                 pickupTask.ToPickUp = toPickUp.Item2;
                 outputTaskList.AddNewTask(pickupTask);
 
@@ -162,13 +152,75 @@ namespace CowMouse.Tasks
                     throw new InvalidOperationException();
 
                 //make THAT task
-                PartialTask putdownTask = new PartialTask(foundPath, outputTaskList, TaskType.PUT_DOWN);
+                TaskStep putdownTask = new StockpileStep(foundPath, toPickUp.Item2, goalPile.Item2, outputTaskList);
                 putdownTask.WhereToPlace = goalPile.Item2;
                 outputTaskList.AddNewTask(putdownTask);
 
                 //freeze and send out!
                 outputTaskList.Freeze();
                 return outputTaskList;
+            }
+        }
+        #endregion
+
+        #region Extension Classes
+        public class PickupStep : TaskStep
+        {
+            public PickupStep(Path path, FullTask parentList, Carryable item)
+                : base(path, parentList, TaskType.PICK_UP)
+            {
+                this.ToPickUp = item;
+
+                if (path != null)
+                {
+                    this.startPoint = path.Start;
+
+                    if (path.End != EndPoint)
+                        throw new ArgumentException("The path doesn't end at the item we're picking up!");
+                }
+                else
+                {
+                    this.startPoint = item.SquareCoordinate;
+                }
+            }
+
+            private Point startPoint;
+            public override Point StartPoint { get { return startPoint; } }
+
+            public override Point EndPoint { get { return ToPickUp.SquareCoordinate; } }
+
+            public override void CleanUp()
+            {
+                if (ToPickUp.IsMarkedForCollection && ToPickUp.IntendedCollector == ParentList)
+                    ToPickUp.UnMarkForCollection(ParentList);
+            }
+        }
+
+        public class StockpileStep : TaskStep
+        {
+            public Carryable ToDropOff { get; protected set; }
+
+            public StockpileStep(Path path, Carryable toDropOff, OccupiableZone stockpile, FullTask parentList)
+                : base(path, parentList, TaskType.PUT_DOWN)
+            {
+                this.ToDropOff = toDropOff;
+                this.WhereToPlace = stockpile;
+
+                this.endPoint = path.End;
+
+                if (Path.Start != StartPoint)
+                    throw new ArgumentException("Path doesn't start where we picked up the item!");
+            }
+
+            public override Point StartPoint { get { return ToDropOff.SquareCoordinate; } }
+
+            private Point endPoint;
+            public override Point EndPoint { get { return endPoint; } }
+
+            public override void CleanUp()
+            {
+                if (WhereToPlace.IsSquareMarkedBy(EndPoint, ParentList))
+                    WhereToPlace.UnMarkSquare(EndPoint, ParentList);
             }
         }
         #endregion
