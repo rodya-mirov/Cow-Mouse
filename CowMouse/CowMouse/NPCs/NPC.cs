@@ -190,7 +190,7 @@ namespace CowMouse.NPCs
             CarriedItem = null;
         }
 
-        private void PutCarriedItemInStockpile(OccupiableZone stockpile)
+        private void PutCarriedItemInStockpile(Building stockpile)
         {
             if (!IsCarryingItem)
                 throw new InvalidOperationException("How do I put *nothing* in this stockpile?");

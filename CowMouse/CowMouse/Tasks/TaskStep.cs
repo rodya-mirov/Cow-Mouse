@@ -54,7 +54,8 @@ namespace CowMouse.Tasks
         public TaskType Type { get; protected set; }
 
         public Carryable ToPickUp { get; protected set; }
-        public OccupiableZone WhereToPlace { get; protected set; }
+        public Building WhereToPlace { get; protected set; }
+        public Building ToBuild { get; protected set; }
 
         /// <summary>
         /// Does any cleanup left to do.  Should be able to be safely
@@ -177,6 +178,8 @@ namespace CowMouse.Tasks
     public enum TaskType
     {
         PICK_UP, //pick up the relevant item
-        PUT_DOWN //put down a carried item in the intended place
+        PUT_DOWN, //put down a carried item in the intended place
+
+        BUILD //do some work!
     }
 }

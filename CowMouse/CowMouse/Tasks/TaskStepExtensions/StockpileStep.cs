@@ -13,7 +13,7 @@ namespace CowMouse.Tasks.TaskStepExtensions
     {
         public Carryable ToDropOff { get; protected set; }
 
-        public StockpileStep(Path path, Carryable toDropOff, OccupiableZone stockpile, FullTask parentList)
+        public StockpileStep(Path path, Carryable toDropOff, Building stockpile, FullTask parentList)
             : base(path, parentList, TaskType.PUT_DOWN)
         {
             this.ToDropOff = toDropOff;

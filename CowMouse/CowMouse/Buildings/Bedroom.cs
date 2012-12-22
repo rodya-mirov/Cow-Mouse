@@ -8,7 +8,7 @@ using CowMouse.NPCs;
 
 namespace CowMouse.Buildings
 {
-    public class Bedroom : OccupiableZone
+    public class Bedroom : Building
     {
         #region Tags
         public override bool Passable { get { return true; } }

@@ -114,7 +114,6 @@
     <Compile Include="Buildings\Barrier.cs" />
     <Compile Include="Buildings\Bedroom.cs" />
     <Compile Include="Buildings\Building.cs" />
-    <Compile Include="Buildings\OccupiableZone.cs" />
     <Compile Include="Buildings\Stockpile.cs" />
     <Compile Include="ClockViewer.cs" />
     <Compile Include="CowMouseMapCell.cs" />
@@ -130,6 +129,7 @@
     <Compile Include="Tasks\TaskStep.cs" />
     <Compile Include="Tasks\TaskHeap.cs" />
     <Compile Include="Tasks\FullTask.cs" />
+    <Compile Include="Tasks\TaskStepExtensions\BuildStep.cs" />
     <Compile Include="Tasks\TaskStepExtensions\PickupStep.cs" />
     <Compile Include="Tasks\TaskStepExtensions\StockpileStep.cs" />
     <Compile Include="TimeKeeper.cs" />

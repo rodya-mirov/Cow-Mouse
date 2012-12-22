@@ -12,7 +12,7 @@ namespace CowMouse.Buildings
     /// <summary>
     /// This is pretty much a damn stockpile.  You can pile stock on it.
     /// </summary>
-    public class Stockpile : OccupiableZone
+    public class Stockpile : Building
     {
         #region Tags
         public override bool Passable { get { return true; } }
