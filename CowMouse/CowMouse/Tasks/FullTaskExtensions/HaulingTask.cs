@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using CowMouse.Tasks.TaskStepExtensions;
 
-namespace CowMouse.Tasks
+namespace CowMouse.Tasks.FullTaskExtensions
 {
     public class HaulingTask : FullTask
     {
@@ -24,8 +25,8 @@ namespace CowMouse.Tasks
             if (this.Tasks.Count != 2)
                 return false;
 
-            CowMouse.Tasks.TaskStep.PickupStep pickup = this.Tasks[0] as CowMouse.Tasks.TaskStep.PickupStep;
-            CowMouse.Tasks.TaskStep.StockpileStep stockpile = this.Tasks[1] as CowMouse.Tasks.TaskStep.StockpileStep;
+            PickupStep pickup = this.Tasks[0] as PickupStep;
+            StockpileStep stockpile = this.Tasks[1] as StockpileStep;
 
             if (pickup == null || stockpile == null)
                 return false;

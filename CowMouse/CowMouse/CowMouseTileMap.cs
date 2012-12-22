@@ -13,22 +13,22 @@ namespace CowMouse
         {
             int[] baseTileCodes = new int[] { 20, 21, 22, 23 };
 
-            baseTiles = new CowMouseMapCell[baseTileCodes.Length];
+            grassTiles = new CowMouseMapCell[baseTileCodes.Length];
 
             for (int i = 0; i < baseTileCodes.Length; i++)
             {
-                baseTiles[i] = new CowMouseMapCell(baseTileCodes[i], true);
+                grassTiles[i] = new CowMouseMapCell(baseTileCodes[i], true);
             }
         }
 
         protected override bool UseCaching { get { return true; } }
 
-        private static CowMouseMapCell[] baseTiles;
+        private static CowMouseMapCell[] grassTiles;
 
         public override CowMouseMapCell MakeMapCell(int x, int y)
         {
             Random ran = new Random(makeSeed(x, y));
-            return baseTiles[ran.Next(baseTiles.Length)];
+            return grassTiles[ran.Next(grassTiles.Length)];
         }
 
         private int makeSeed(int x, int y)

@@ -126,10 +126,12 @@
     <Compile Include="InGameObjects\Torch.cs" />
     <Compile Include="NPCs\NPC.cs" />
     <Compile Include="NPCs\Person.cs" />
-    <Compile Include="Tasks\HaulingTask.cs" />
+    <Compile Include="Tasks\FullTaskExtensions\HaulingTask.cs" />
     <Compile Include="Tasks\TaskStep.cs" />
     <Compile Include="Tasks\TaskHeap.cs" />
     <Compile Include="Tasks\FullTask.cs" />
+    <Compile Include="Tasks\TaskStepExtensions\PickupStep.cs" />
+    <Compile Include="Tasks\TaskStepExtensions\StockpileStep.cs" />
     <Compile Include="TimeKeeper.cs" />
     <Compile Include="UserInterface\SideMenu.cs" />
     <Compile Include="CowMouseComponent.cs" />

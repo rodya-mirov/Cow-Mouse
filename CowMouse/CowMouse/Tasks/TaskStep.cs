@@ -8,6 +8,8 @@ using TileEngine.Utilities.Pathfinding;
 using CowMouse.InGameObjects;
 using CowMouse.NPCs;
 using CowMouse.Buildings;
+using CowMouse.Tasks.TaskStepExtensions;
+using CowMouse.Tasks.FullTaskExtensions;
 
 namespace CowMouse.Tasks
 {
@@ -18,6 +20,11 @@ namespace CowMouse.Tasks
     /// then do the action type.  Any required fields for the action
     /// should be non-null; others are probably (but not guaranteed
     /// to be) non-null.
+    /// 
+    /// Note that TaskStep is abstract, but the extension classes
+    /// are pretty simple, and anything USING a TaskStep should be
+    /// able to just use TaskStep, and not worry about what kind
+    /// of Step it is (aside from the TaskType property, of course).
     /// </summary>
     public abstract class TaskStep
     {
@@ -159,68 +166,6 @@ namespace CowMouse.Tasks
                 //freeze and send out!
                 outputTaskList.Freeze();
                 return outputTaskList;
-            }
-        }
-        #endregion
-
-        #region Extension Classes
-        public class PickupStep : TaskStep
-        {
-            public PickupStep(Path path, FullTask parentList, Carryable item)
-                : base(path, parentList, TaskType.PICK_UP)
-            {
-                this.ToPickUp = item;
-
-                if (path != null)
-                {
-                    this.startPoint = path.Start;
-
-                    if (path.End != EndPoint)
-                        throw new ArgumentException("The path doesn't end at the item we're picking up!");
-                }
-                else
-                {
-                    this.startPoint = item.SquareCoordinate;
-                }
-            }
-
-            private Point startPoint;
-            public override Point StartPoint { get { return startPoint; } }
-
-            public override Point EndPoint { get { return ToPickUp.SquareCoordinate; } }
-
-            public override void CleanUp()
-            {
-                if (ToPickUp.IsMarkedForCollection && ToPickUp.IntendedCollector == ParentList)
-                    ToPickUp.UnMarkForCollection(ParentList);
-            }
-        }
-
-        public class StockpileStep : TaskStep
-        {
-            public Carryable ToDropOff { get; protected set; }
-
-            public StockpileStep(Path path, Carryable toDropOff, OccupiableZone stockpile, FullTask parentList)
-                : base(path, parentList, TaskType.PUT_DOWN)
-            {
-                this.ToDropOff = toDropOff;
-                this.WhereToPlace = stockpile;
-
-                this.endPoint = path.End;
-
-                if (Path.Start != StartPoint)
-                    throw new ArgumentException("Path doesn't start where we picked up the item!");
-            }
-
-            public override Point StartPoint { get { return ToDropOff.SquareCoordinate; } }
-
-            private Point endPoint;
-            public override Point EndPoint { get { return endPoint; } }
-
-            public override void CleanUp()
-            {
-                if (WhereToPlace.IsSquareMarkedBy(EndPoint, ParentList))
-                    WhereToPlace.UnMarkSquare(EndPoint, ParentList);
             }
         }
         #endregion
