@@ -64,8 +64,8 @@ namespace CowMouse.NPCs
             }
             else if (WorldManager.HasAvailableTasks())
             {
-                FullTask taskToTry = WorldManager.TakeAvailableTask();
-                thinkingThread = new Thread(() => LoadTask(taskToTry));
+                List<FullTask> tasksToTry = WorldManager.TakeTopPriorityTasks();
+                thinkingThread = new Thread(() => LoadTask(tasksToTry));
                 StartThinkingThread();
             }
         }
@@ -79,21 +79,38 @@ namespace CowMouse.NPCs
             thinkingThread.Start();
         }
 
-        private void LoadTask(FullTask taskToTry)
+        private void LoadTask(List<FullTask> tasksToTry)
         {
             Point myPoint = this.SquareCoordinate;
+
             HashSet<Point> goalPoints = new HashSet<Point>();
-            goalPoints.Add(taskToTry.StartPoint);
+
+            foreach (FullTask task in tasksToTry)
+                goalPoints.Add(task.StartPoint);
 
             Path pathToTask = PathHunter.GetPath(myPoint, goalPoints, DEFAULT_SEARCH_DEPTH, WorldManager, lastUpdateTime);
 
             if (pathToTask == null)
             {
-                WorldManager.ReturnTaskUnfinished(taskToTry);
+                foreach(FullTask task in tasksToTry)
+                    WorldManager.ReturnTaskUnfinished(task);
             }
             else
             {
-                SetCurrentTask(taskToTry, pathToTask);
+                bool foundTask = false;
+
+                foreach (FullTask task in tasksToTry)
+                {
+                    if (!foundTask && task.StartPoint == pathToTask.End)
+                    {
+                        foundTask = true;
+                        SetCurrentTask(task, pathToTask);
+                    }
+                    else
+                    {
+                        WorldManager.ReturnTaskUnfinished(task);
+                    }
+                }
             }
 
             thinkingThread = null;
@@ -140,6 +157,10 @@ namespace CowMouse.NPCs
 
                 case TaskType.PUT_DOWN:
                     PutCarriedItemInStockpile(currentPartialTask.WhereToPlace);
+                    break;
+
+                case TaskType.BUILD:
+                    currentPartialTask.ToBuild.BuildSquare(SquareCoordinate.X, SquareCoordinate.Y, currentMainTask);
                     break;
 
                 default:

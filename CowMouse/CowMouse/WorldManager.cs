@@ -25,7 +25,7 @@ namespace CowMouse
         private CowMouseMapCell defaultHighlightCell { get; set; }
         private CowMouseMapCell defaultInvalidCell { get; set; }
 
-        private SortedSet<Building> buildings;
+        private Queue<Building> buildings;
         private Queue<Building> buildingQueue;
 
         private Queue<Person> npcs;
@@ -111,7 +111,7 @@ namespace CowMouse
             this.game = game;
             Clock = new TimeKeeper(10);
 
-            buildings = new SortedSet<Building>();
+            buildings = new Queue<Building>();
             buildingQueue = new Queue<Building>();
 
             makeStartingInWorldObjects();
@@ -454,19 +454,19 @@ namespace CowMouse
         /// <param name="gameTime"></param>
         private void AddQueuedBuildings()
         {
-            SortedSet<Building> newBuildings = new SortedSet<Building>();
+            Queue<Building> newBuildings = new Queue<Building>();
 
             bool newWalls = false;
 
             foreach (Building b in buildings)
             {
-                newBuildings.Add(b);
+                newBuildings.Enqueue(b);
                 if (!b.Passable)
                     newWalls = true;
             }
 
             foreach (Building b in buildingQueue)
-                newBuildings.Add(b);
+                newBuildings.Enqueue(b);
 
             buildingQueue.Clear();
             this.buildings = newBuildings;
@@ -478,7 +478,9 @@ namespace CowMouse
 
         #region Task manager
         private const int DEFAULT_SEARCH_DEPTH = 300;
+
         private const int HAULING_PRIORITY = 100;
+        private const int BUILDING_PRIORITY = 80;
 
         private TaskHeap availableTasks = new TaskHeap();
         private Queue<FullTask> queuedTasks = new Queue<FullTask>();
@@ -493,13 +495,25 @@ namespace CowMouse
         }
 
         /// <summary>
-        /// Returns the highest priority task and removes it from
-        /// the available task heap.
+        /// Returns the highest priority tasks and removes them from
+        /// the available task heap.  So if the tasks stored have
+        /// priorities 20, 20, 20, 35, 40, 40, 50, it will return
+        /// a list of the first three.
         /// </summary>
         /// <returns></returns>
-        public FullTask TakeAvailableTask()
+        public List<FullTask> TakeTopPriorityTasks()
         {
-            FullTask output = availableTasks.Pop();
+            List<FullTask> output = new List<FullTask>();
+
+            FullTask first = availableTasks.Pop();
+
+            output.Add(first);
+
+            while (availableTasks.Count > 0 && availableTasks.Peek().Priority <= first.Priority)
+            {
+                output.Add(availableTasks.Pop());
+            }
+
             return output;
         }
 
@@ -510,7 +524,19 @@ namespace CowMouse
         /// <param name="task"></param>
         public void ReturnTaskUnfinished(FullTask task)
         {
-            queuedTasks.Enqueue(task);
+            EnqueueTask(task);
+        }
+
+        /// <summary>
+        /// Just adds the task to the list of tasks.
+        /// </summary>
+        /// <param name="task"></param>
+        private void EnqueueTask(FullTask task)
+        {
+            lock (queuedTasks)
+            {
+                queuedTasks.Enqueue(task);
+            }
         }
 
         private Thread thinkingThread = null;
@@ -543,13 +569,19 @@ namespace CowMouse
         private void AddQueuedTasks()
         {
             TaskHeap newTaskHeap = new TaskHeap();
-            foreach (FullTask taskList in availableTasks)
-                newTaskHeap.Add(taskList);
+            foreach (FullTask task in availableTasks)
+                newTaskHeap.Add(task);
 
-            foreach (FullTask newTask in queuedTasks)
-                newTaskHeap.Add(newTask);
+            lock (queuedTasks)
+            {
+                foreach (FullTask task in queuedTasks)
+                {
+                    newTaskHeap.Add(task);
+                }
 
-            queuedTasks.Clear();
+                queuedTasks.Clear();
+            }
+
             availableTasks = newTaskHeap;
         }
 
@@ -564,13 +596,20 @@ namespace CowMouse
                 thinkingThread = new Thread(() => makeHaulingTask_ThreadHelper());
                 StartThinkingThread();
             }
+
+            if (BuildingTaskPossible())
+            {
+                thinkingThread = new Thread(() => makeBuildingTask_ThreadHelper());
+                StartThinkingThread();
+            }
         }
 
         private void makeHaulingTask_ThreadHelper()
         {
-            FullTask haulingTask = TaskStep.MakeHaulingGoal(this, DEFAULT_SEARCH_DEPTH, this.currentTime, HAULING_PRIORITY);
+            FullTask haulingTask = TaskBuilder.MakeHaulingTask(this, DEFAULT_SEARCH_DEPTH, this.currentTime, HAULING_PRIORITY);
+
             if (haulingTask != null)
-                queuedTasks.Enqueue(haulingTask);
+                EnqueueTask(haulingTask);
 
             EndOfThinkingThread();
         }
@@ -604,6 +643,27 @@ namespace CowMouse
             }
 
             return resourceExists && stockpileExists;
+        }
+
+        private void makeBuildingTask_ThreadHelper()
+        {
+            FullTask buildingTask = TaskBuilder.MakeBuildingTask(this, DEFAULT_SEARCH_DEPTH, this.currentTime, BUILDING_PRIORITY);
+
+            if (buildingTask != null)
+                EnqueueTask(buildingTask);
+
+            EndOfThinkingThread();
+        }
+
+        private bool BuildingTaskPossible()
+        {
+            foreach (Building building in buildings)
+            {
+                if (building.HasUnbuiltSquare())
+                    return true;
+            }
+
+            return false;
         }
         #endregion
 

@@ -125,7 +125,9 @@
     <Compile Include="InGameObjects\Torch.cs" />
     <Compile Include="NPCs\NPC.cs" />
     <Compile Include="NPCs\Person.cs" />
+    <Compile Include="Tasks\FullTaskExtensions\BuildingTask.cs" />
     <Compile Include="Tasks\FullTaskExtensions\HaulingTask.cs" />
+    <Compile Include="Tasks\TaskBuilder.cs" />
     <Compile Include="Tasks\TaskStep.cs" />
     <Compile Include="Tasks\TaskHeap.cs" />
     <Compile Include="Tasks\FullTask.cs" />

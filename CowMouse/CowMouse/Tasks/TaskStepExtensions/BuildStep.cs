@@ -38,7 +38,8 @@ namespace CowMouse.Tasks.TaskStepExtensions
         /// </summary>
         private void checkIfBuildActionMakesSense()
         {
-            throw new NotImplementedException();
+            if (!ToBuild.CellIsMarkedForBuildingBy(EndPoint.X, EndPoint.Y, ParentList))
+                throw new ArgumentException("Cell isn't properly marked for building!");
         }
 
         public override void CleanUp()

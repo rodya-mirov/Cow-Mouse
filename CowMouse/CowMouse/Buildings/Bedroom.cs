@@ -21,6 +21,11 @@ namespace CowMouse.Buildings
             addFloors();
         }
 
+        protected override void setSquareToBuilt(int worldX, int worldY)
+        {
+            throw new NotImplementedException();
+        }
+
         private void addFloors()
         {
             CowMouseTileMap map = WorldManager.MyMap;

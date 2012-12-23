@@ -88,20 +88,27 @@ namespace CowMouse.Buildings
 
             this.WorldManager = manager;
 
-            InitializeSquareStates(CellState.STORAGE_AVAILABLE);
+            InitializeSquareStates(CellState.UNBUILT_AVAILABLE);
         }
 
+        /// <summary>
+        /// How many frames it takes to build a single square in this building,
+        /// ignoring hauling, etc. time.
+        /// </summary>
+        public virtual int SquareBuildTime { get { return 45; } }
+
+        #region Cell Containment
         /// <summary>
         /// Determines whether or not this Building contains a specific cell,
         /// based on its coordinates.
         /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
+        /// <param name="worldX"></param>
+        /// <param name="worldY"></param>
         /// <returns></returns>
-        public virtual bool ContainsCell(int x, int y)
+        public virtual bool ContainsCell(int worldX, int worldY)
         {
-            return XMin <= x && x <= XMax
-                && YMin <= y && y <= YMax;
+            return XMin <= worldX && worldX <= XMax
+                && YMin <= worldY && worldY <= YMax;
         }
 
         /// <summary>
@@ -143,6 +150,7 @@ namespace CowMouse.Buildings
                 return true;
             }
         }
+        #endregion
 
         /// <summary>
         /// Update method is called every turn; the base Update
@@ -185,7 +193,7 @@ namespace CowMouse.Buildings
                 stateCounts[state] = 0;
             }
 
-            stateCounts[CellState.STORAGE_AVAILABLE] = Area;
+            stateCounts[defaultState] = Area;
 
             markers = new FullTask[Width, Height];
             occupants = new InWorldObject[Width, Height];
@@ -208,11 +216,103 @@ namespace CowMouse.Buildings
             stateCounts[squareStates[x, y]] += 1;
         }
 
+        #region Building the Building
+        /// <summary>
+        /// Determines whether or not there is an unbuilt square.
+        /// </summary>
+        /// <returns></returns>
+        public bool HasUnbuiltSquare()
+        {
+            return stateCounts[CellState.UNBUILT_AVAILABLE] > 0;
+        }
+
+        /// <summary>
+        /// Returns the world coordinates for the next unbuilt
+        /// square.  Throws a fit if there are none.
+        /// </summary>
+        /// <returns></returns>
+        public Point GetNextUnbuiltSquare()
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    if (squareStates[x, y] == CellState.UNBUILT_AVAILABLE)
+                    {
+                        return new Point(x + XMin, y + YMin);
+                    }
+                }
+            }
+
+            throw new InvalidOperationException("There are no unbuilt squares!  Check first!");
+        }
+
+        public void MarkSquareForBuilding(int worldX, int worldY, FullTask marker)
+        {
+            if (!this.ContainsCell(worldX, worldY))
+                throw new ArgumentOutOfRangeException("Cell is not in the building.");
+
+            CellState state = squareStates[worldX - XMin, worldY - YMin];
+
+            if (state != CellState.UNBUILT_AVAILABLE)
+                throw new InvalidOperationException("This cell is not available for building.");
+
+            this.SetSquareState(worldX, worldY, CellState.UNBUILT_MARKED);
+            markers[worldX - XMin, worldY - YMin] = marker;
+        }
+
+        /// <summary>
+        /// Returns true when the specified cell is in the building, marked for building,
+        /// and the associated marker is the specified argument.  Returns false if any
+        /// of these are not satisfied.
+        /// </summary>
+        /// <param name="worldX"></param>
+        /// <param name="worldY"></param>
+        /// <param name="marker"></param>
+        /// <returns></returns>
+        public bool CellIsMarkedForBuildingBy(int worldX, int worldY, FullTask marker)
+        {
+            if (!this.ContainsCell(worldX, worldY))
+                return false;
+
+            if (squareStates[worldX - XMin, worldY - YMin] != CellState.UNBUILT_MARKED)
+                return false;
+
+            return markers[worldX - XMin, worldY - YMin] == marker;
+        }
+
+        /// <summary>
+        /// Attempts to build up the square in the building.
+        /// Throws a fit if the square is not in the building, or
+        /// if the square specified is not Unbuilt.
+        /// </summary>
+        /// <param name="worldX"></param>
+        /// <param name="worldY"></param>
+        public void BuildSquare(int worldX, int worldY, FullTask marker)
+        {
+            if (!this.ContainsCell(worldX, worldY))
+                throw new ArgumentOutOfRangeException("The specified cell is not in the building!");
+
+            if (!this.CellIsMarkedForBuildingBy(worldX, worldY, marker))
+                throw new InvalidOperationException("Have to mark the square first!");
+
+            setSquareToBuilt(worldX, worldY);
+        }
+
+        /// <summary>
+        /// Sets a square to whatever the state should be after building.
+        /// Checks, etc. have already been done, so don't worry about that.
+        /// </summary>
+        /// <param name="worldX"></param>
+        /// <param name="worldY"></param>
+        protected abstract void setSquareToBuilt(int worldX, int worldY);
+        #endregion
+
         //The following region contains a lot (probably too many) very simple
         //and very similar method for fiddling with using this building as
         //a storage place.
 
-        #region Storage
+        #region Storage and Occupation
         /// <summary>
         /// Determines whether or not there is a square which is 
         /// available for storage.
@@ -374,7 +474,7 @@ namespace CowMouse.Buildings
             int x = worldX - XMin;
             int y = worldY - YMin;
 
-            if (squareStates[x, y] != CellState.STORAGE_MARKED)
+            if (squareStates[x, y] != CellState.STORAGE_MARKED && squareStates[x, y] != CellState.UNBUILT_MARKED)
                 throw new InvalidOperationException("Square is not marked!");
 
             return markers[x, y];
@@ -554,8 +654,10 @@ namespace CowMouse.Buildings
     /// </summary>
     public enum CellState
     {
-        UNBUILT, //has not been built, can't do much until it is
-        
+        UNBUILT_AVAILABLE, //has not been built, can't do much until it is
+        UNBUILT_MARKED, //has not been built, but someone is getting stuff for it
+        UNBUILT_BUILDING, //has not bee built, but someone is working on it
+
         STORAGE_AVAILABLE, //available for storage with no complications
         STORAGE_MARKED, //available for storage, but someone has called dibs
         STORAGE_OCCUPIED //currently used for storage, is occupied
