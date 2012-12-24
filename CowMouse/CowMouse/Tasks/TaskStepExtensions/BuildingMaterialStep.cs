@@ -9,11 +9,11 @@ using Microsoft.Xna.Framework;
 
 namespace CowMouse.Tasks.TaskStepExtensions
 {
-    public class StockpileStep : TaskStep
+    public class BuildingMaterialStep : TaskStep
     {
         public Carryable ToDropOff { get; protected set; }
 
-        public StockpileStep(Path path, Carryable toDropOff, Building stockpile, FullTask parentList)
+        public BuildingMaterialStep(Path path, Carryable toDropOff, Building stockpile, FullTask parentList)
             : base(path, parentList, TaskType.PUT_DOWN)
         {
             this.ToDropOff = toDropOff;
@@ -32,8 +32,8 @@ namespace CowMouse.Tasks.TaskStepExtensions
 
         public override void CleanUp()
         {
-            if (WhereToPlace.IsSquareMarkedForStorageBy(EndPoint.X, EndPoint.Y, ParentList))
-                WhereToPlace.UnMarkSquareForStorage(EndPoint.X, EndPoint.Y, ParentList);
+            if (WhereToPlace.IsSquareMarkedForMaterialsBy(EndPoint.X, EndPoint.Y, ParentList))
+                WhereToPlace.UnMarkSquareForMaterials(EndPoint.X, EndPoint.Y, ParentList);
         }
     }
 }

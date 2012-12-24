@@ -597,11 +597,44 @@ namespace CowMouse
                 StartThinkingThread();
             }
 
-            if (BuildingTaskPossible())
+            else if (BuildingTaskPossible())
             {
                 thinkingThread = new Thread(() => makeBuildingTask_ThreadHelper());
                 StartThinkingThread();
             }
+
+            else if (BuildingMaterialTaskPossible())
+            {
+                thinkingThread = new Thread(() => makeBuildingMaterialTask_ThreadHelper());
+                StartThinkingThread();
+            }
+        }
+
+        private void makeBuildingMaterialTask_ThreadHelper()
+        {
+            FullTask materialTask = TaskBuilder.MakeBuildingMaterialTask(this, DEFAULT_SEARCH_DEPTH, this.currentTime, BUILDING_PRIORITY);
+
+            if (materialTask != null)
+                EnqueueTask(materialTask);
+
+            EndOfThinkingThread();
+        }
+
+        private bool BuildingMaterialTaskPossible()
+        {
+            foreach (Building building in Buildings)
+            {
+                foreach (Point point in building.SquaresThatNeedMaterials)
+                {
+                    foreach (Carryable car in Carryables)
+                    {
+                        if (building.DoesResourceFitNeed(point.X, point.Y, car))
+                            return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private void makeHaulingTask_ThreadHelper()

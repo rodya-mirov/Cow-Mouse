@@ -21,6 +21,18 @@ namespace CowMouse.Buildings
             addFloors();
         }
 
+        #region Building Materials
+        protected override int NumberOfMaterialsPerSquare
+        {
+            get { return 0; }
+        }
+
+        protected override bool DoesResourceFitNeed(InWorldObject resource, int materialIndex)
+        {
+            return false;
+        }
+        #endregion
+
         protected override void setSquareToBuilt(int worldX, int worldY)
         {
             throw new NotImplementedException();
@@ -28,16 +40,7 @@ namespace CowMouse.Buildings
 
         private void addFloors()
         {
-            CowMouseTileMap map = WorldManager.MyMap;
-            CowMouseMapCell cell = new CowMouseMapCell(1, true);
-
-            for (int x = XMin; x <= XMax; x++)
-            {
-                for (int y = YMin; y <= YMax; y++)
-                {
-                    map.AddConstructedCell(cell, x, y);
-                }
-            }
+            throw new NotImplementedException();
         }
     }
 }

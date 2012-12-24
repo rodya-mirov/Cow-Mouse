@@ -44,7 +44,8 @@ namespace CowMouse.Tasks.TaskStepExtensions
 
         public override void CleanUp()
         {
-            throw new NotImplementedException();
+            if (ToBuild.CellIsMarkedForBuildingBy(EndPoint.X, EndPoint.Y, ParentList))
+                ToBuild.UnMarkSquareForBuilding(EndPoint.X, EndPoint.Y, ParentList);
         }
 
         private Point startPoint;

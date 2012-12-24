@@ -54,7 +54,7 @@ namespace CowMouse.Tasks
 
                     stockpileLocations.Add(point);
 
-                    pile.MarkSquare(point, outputTaskList);
+                    pile.MarkSquareForStorage(point.X, point.Y, outputTaskList);
                     markedStockpiles.Add(new Tuple<Point, Stockpile>(point, pile));
                 }
             }
@@ -69,7 +69,7 @@ namespace CowMouse.Tasks
                     tup.Item2.UnMarkForCollection(outputTaskList);
 
                 foreach (Tuple<Point, Stockpile> tup in markedStockpiles)
-                    tup.Item2.UnMarkSquare(tup.Item1, outputTaskList);
+                    tup.Item2.UnMarkSquareForStorage(tup.Item1.X, tup.Item1.Y, outputTaskList);
 
                 //and give up
                 return null;
@@ -102,7 +102,7 @@ namespace CowMouse.Tasks
                     if (goalPile == null && tup.Item1 == foundPath.End)
                         goalPile = tup;
                     else
-                        tup.Item2.UnMarkSquare(tup.Item1, outputTaskList);
+                        tup.Item2.UnMarkSquareForStorage(tup.Item1.X, tup.Item1.Y, outputTaskList);
                 }
 
                 if (goalPile == null)
@@ -147,6 +147,90 @@ namespace CowMouse.Tasks
             output.Freeze();
 
             return output;
+        }
+
+        public static FullTask MakeBuildingMaterialTask(WorldManager manager, int searchDepth, GameTime gameTime, int priority)
+        {
+            HashSet<Carryable> validResources = new HashSet<Carryable>();
+            HashSet<Point> startPoints = new HashSet<Point>();
+            HashSet<Point> goalPoints = new HashSet<Point>();
+
+            BuildingMaterialTask task = new BuildingMaterialTask(priority);
+
+            foreach (Building building in manager.Buildings)
+            {
+                foreach (Point point in building.SquaresThatNeedMaterials)
+                {
+                    building.MarkSquareForMaterials(point.X, point.Y, task);
+
+                    validResources.Clear();
+                    startPoints.Clear();
+                    goalPoints.Clear();
+
+                    goalPoints.Add(point);
+
+                    bool foundValidResource = false;
+
+                    foreach (Carryable car in manager.Carryables)
+                    {
+                        if (car.IsAvailableForUse && building.DoesResourceFitNeed(point.X, point.Y, car))
+                        {
+                            foundValidResource = true;
+                            validResources.Add(car);
+                            startPoints.Add(car.SquareCoordinate);
+
+                            car.MarkForCollection(task);
+                        }
+                    }
+
+                    if (!foundValidResource) //clean up, move on
+                    {
+                        building.UnMarkSquareForMaterials(point.X, point.Y, task);
+                        continue;
+                    }
+
+                    //atempt to path
+                    Path pathFromResourceToBuildingCell = PathHunter.GetPath(startPoints, goalPoints, searchDepth, manager, gameTime);
+
+                    //if no path, clean up and move on
+                    if (pathFromResourceToBuildingCell == null)
+                    {
+                        building.UnMarkSquareForMaterials(point.X, point.Y, task);
+
+                        foreach(Carryable car in validResources)
+                            car.UnMarkForCollection(task);
+
+                        continue;
+                    }
+
+                    foundValidResource = false;
+                    Carryable taskResource = null;
+
+                    foreach (Carryable car in validResources)
+                    {
+                        if (!foundValidResource && car.SquareCoordinate == pathFromResourceToBuildingCell.Start)
+                        {
+                            taskResource = car;
+                            foundValidResource = true;
+                        }
+                        else
+                        {
+                            car.UnMarkForCollection(task);
+                        }
+                    }
+
+                    PickupStep pickupStep = new PickupStep(null, task, taskResource);
+                    BuildingMaterialStep materialStep = new BuildingMaterialStep(pathFromResourceToBuildingCell, taskResource, building, task);
+
+                    task.AddNewTask(pickupStep);
+                    task.AddNewTask(materialStep);
+                    task.Freeze();
+
+                    return task;
+                }
+            }
+
+            return null;
         }
     }
 }

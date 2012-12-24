@@ -18,14 +18,9 @@ namespace CowMouse.InGameObjects
         protected CowMouseTileMap Map { get { return WorldManager.MyMap; } }
 
         #region Carrying business
-        protected bool isBeingCarried;
-        protected InWorldObject carryingPerson;
+        protected InWorldObject carryingPerson = null;
+        protected FullTask intendedCollector = null;
 
-        protected bool isMarkedForCollection;
-        protected FullTask intendedCollector;
-
-        public override bool CanBePickedUp { get { return !IsBeingCarried; } }
-        public override bool IsBeingCarried { get { return isBeingCarried; } }
         protected override InWorldObject CarryingPerson { get { return carryingPerson; } }
 
         public override void GetPickedUp(InWorldObject picker)
@@ -33,48 +28,63 @@ namespace CowMouse.InGameObjects
             if (!CanBePickedUp)
                 throw new InvalidOperationException("Can't be picked up right now.");
 
-            isBeingCarried = true;
+            this.currentState = CarryableState.CARRIED;
             carryingPerson = picker;
-
-            IsInStockpile = false;
         }
 
-        public override void GetPutDown()
+        public override void Drop()
         {
             if (!IsBeingCarried)
                 throw new InvalidOperationException("Isn't being carried right now.");
 
-            isBeingCarried = false;
             carryingPerson = null;
-
-            isMarkedForCollection = false;
             intendedCollector = null;
+
+            currentState = CarryableState.LOOSE;
         }
 
-        public override bool IsMarkedForCollection { get { return isMarkedForCollection; } }
+        public override void GetPutInStockpile()
+        {
+            if (!IsBeingCarried)
+                throw new InvalidOperationException("Isn't being carried right now.");
+
+            carryingPerson = null;
+            intendedCollector = null;
+
+            this.currentState = CarryableState.IN_STOCKPILE;
+        }
+
+        public override void GetUsedAsMaterial()
+        {
+            if (!IsBeingCarried)
+                throw new InvalidOperationException("Isn't being carried right now.");
+
+            carryingPerson = null;
+            intendedCollector = null;
+
+            this.currentState = CarryableState.LOCKED_AS_MATERIAL;
+        }
+
         public override FullTask IntendedCollector { get { return intendedCollector; } }
 
         public override void MarkForCollection(FullTask collector)
         {
-            if (isMarkedForCollection)
-                throw new InvalidOperationException("This is already marked for collection!");
+            if (!this.IsAvailableForUse)
+                throw new InvalidOperationException("Not available for use!");
 
-            if (!CanBePickedUp)
-                throw new InvalidOperationException("Can't mark this for collection because it isn't valid to pick it up.");
-
-            isMarkedForCollection = true;
+            currentState = CarryableState.MARKED_FOR_COLLECTION;
             intendedCollector = collector;
         }
 
         public override void UnMarkForCollection(FullTask collector)
         {
-            if (!isMarkedForCollection)
-                throw new InvalidOperationException("Can't unmark what wasn't marked!");
+            if (this.currentState != CarryableState.MARKED_FOR_COLLECTION)
+                throw new InvalidOperationException("This is not marked for collection!");
 
             if (IntendedCollector != collector)
                 throw new InvalidOperationException("Only the marker can unmark the marked, and you are not it!");
 
-            isMarkedForCollection = false;
+            this.currentState = CarryableState.LOOSE;
             intendedCollector = null;
         }
         #endregion
@@ -85,10 +95,9 @@ namespace CowMouse.InGameObjects
             get { return true; }
         }
 
-        public override bool IsInStockpile
+        public override bool IsWood
         {
-            get;
-            set;
+            get { return true; }
         }
         #endregion
 
@@ -120,6 +129,8 @@ namespace CowMouse.InGameObjects
                 this.xPos = xCoordinate;
                 this.yPos = yCoordinate;
             }
+
+            this.currentState = CarryableState.LOOSE;
         }
 
         public static void LoadContent(Game game)

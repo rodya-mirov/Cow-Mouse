@@ -189,15 +189,14 @@ namespace CowMouse.NPCs
             if (IsCarryingItem)
                 throw new NotImplementedException("Not sure how to pick up two things bro");
 
-            CarriedItem = item;
-            item.GetPickedUp(this);
-
-            //now, just check if all the marking stuff worked properly
             if (!(item.IsMarkedForCollection && item.IntendedCollector == currentMainTask))
                 throw new InvalidOperationException("THIS IS STOLEN ITEM!");
 
             if (!(item.InWorldSquareBoundingBox.Intersects(this.InWorldSquareBoundingBox)))
                 throw new InvalidOperationException("It's so far away!  I can't reach it!");
+
+            CarriedItem = item;
+            item.GetPickedUp(this);
         }
 
         private void DropCarriedItem()
@@ -205,8 +204,7 @@ namespace CowMouse.NPCs
             if (!IsCarryingItem)
                 throw new InvalidOperationException("How do I drop *nothing*?");
 
-            CarriedItem.GetPutDown();
-            CarriedItem.IsInStockpile = false;
+            CarriedItem.Drop();
 
             CarriedItem = null;
         }
@@ -216,10 +214,7 @@ namespace CowMouse.NPCs
             if (!IsCarryingItem)
                 throw new InvalidOperationException("How do I put *nothing* in this stockpile?");
 
-            stockpile.OccupySquare(SquareCoordinate, currentMainTask, CarriedItem);
-
-            CarriedItem.GetPutDown();
-            CarriedItem.IsInStockpile = true;
+            stockpile.ReceiveObject(SquareCoordinate.X, SquareCoordinate.Y, CarriedItem, currentMainTask);
 
             CarriedItem = null;
         }
