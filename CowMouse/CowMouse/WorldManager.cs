@@ -130,7 +130,8 @@ namespace CowMouse
             base.LoadContent();
 
             Person.LoadContent(this.game);
-            Log.LoadContent(this.game);
+
+            BasicResource.LoadContent(this.game);
             Torch.LoadContent(this.game);
 
             CowMouseTileMap.LoadContent(this.game);
@@ -213,7 +214,7 @@ namespace CowMouse
                 }
 
                 placed.Add(p);
-                carryables.Enqueue(new Log(x, y - x, true, this));
+                carryables.Enqueue(new Log(x, y - x, this));
             }
         }
         #endregion

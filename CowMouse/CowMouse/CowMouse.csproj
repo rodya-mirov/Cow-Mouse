@@ -118,6 +118,7 @@
     <Compile Include="ClockViewer.cs" />
     <Compile Include="CowMouseMapCell.cs" />
     <Compile Include="CowMouseTileMap.cs" />
+    <Compile Include="InGameObjects\BasicResource.cs" />
     <Compile Include="InGameObjects\Carryable.cs" />
     <Compile Include="InGameObjects\InWorldObject.cs" />
     <Compile Include="InGameObjects\Log.cs" />
