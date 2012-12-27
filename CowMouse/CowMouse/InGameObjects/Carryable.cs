@@ -146,6 +146,26 @@ namespace CowMouse.InGameObjects
         protected CarryableState currentState;
         #endregion
 
+        public override bool Visible
+        {
+            get
+            {
+                switch (currentState)
+                {
+                    case CarryableState.CARRIED:
+                    case CarryableState.IN_STOCKPILE:
+                    case CarryableState.LOOSE:
+                    case CarryableState.MARKED_FOR_COLLECTION:
+                        return true;
+
+                    case CarryableState.LOCKED_AS_MATERIAL:
+                        return false;
+
+                    default: throw new NotImplementedException();
+                }
+            }
+        }
+
         public bool IsAvailableForUse
         {
             get
