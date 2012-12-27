@@ -7,25 +7,25 @@ using TileEngine.Utilities;
 
 namespace CowMouse
 {
-    public class CowMouseMapCell : MapCell, Translatable<CowMouseMapCell>
+    public class CowMouseMapCell : MapCell, Copyable<CowMouseMapCell>
     {
-        public CowMouseMapCell(int baseTile, int x, int y, bool passable)
-            : base(baseTile, x, y)
+        public CowMouseMapCell(int baseTile, bool passable)
+            : base(baseTile)
         {
             this.Passable = passable;
         }
 
-        protected CowMouseMapCell(int x, int y, bool passable)
-            : base(x, y)
+        protected CowMouseMapCell(bool passable)
+            : base()
         {
             this.Passable = passable;
         }
 
-        public new CowMouseMapCell CopyAt(int newX, int newY)
+        public new CowMouseMapCell Copy()
         {
-            MapCell baseCopy = base.CopyAt(newX, newY);
+            MapCell baseCopy = base.Copy();
 
-            CowMouseMapCell output = new CowMouseMapCell(newX, newY, this.Passable);
+            CowMouseMapCell output = new CowMouseMapCell(this.Passable);
             output.Tiles = baseCopy.TilesCopy();
 
             return output;

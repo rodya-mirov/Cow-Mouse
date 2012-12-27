@@ -8,7 +8,7 @@ using CowMouse.NPCs;
 
 namespace CowMouse.Buildings
 {
-    public class Bedroom : OccupiableZone
+    public class Bedroom : Building
     {
         #region Tags
         public override bool Passable { get { return true; } }
@@ -21,18 +21,26 @@ namespace CowMouse.Buildings
             addFloors();
         }
 
+        #region Building Materials
+        protected override int NumberOfMaterialsPerSquare
+        {
+            get { return 0; }
+        }
+
+        protected override bool DoesResourceFitNeed(InWorldObject resource, int materialIndex)
+        {
+            return false;
+        }
+        #endregion
+
+        protected override void setSquareToBuilt(int worldX, int worldY)
+        {
+            throw new NotImplementedException();
+        }
+
         private void addFloors()
         {
-            CowMouseTileMap map = WorldManager.MyMap;
-            CowMouseMapCell cell = new CowMouseMapCell(1, 0, 0, true);
-
-            for (int x = XMin; x <= XMax; x++)
-            {
-                for (int y = YMin; y <= YMax; y++)
-                {
-                    map.AddConstructedCell(cell, x, y);
-                }
-            }
+            throw new NotImplementedException();
         }
     }
 }

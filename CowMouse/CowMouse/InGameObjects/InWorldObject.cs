@@ -90,17 +90,5 @@ namespace CowMouse.InGameObjects
         {
             this.WorldManager = manager;
         }
-
-        public IEnumerable<Point> TouchedSquareCoordinates()
-        {
-            Rectangle box = this.InWorldSquareBoundingBox;
-            for (int x = box.Left; x < box.Right; x++)
-            {
-                for (int y = box.Top; y < box.Bottom; y++)
-                {
-                    yield return new Point(x, y);
-                }
-            }
-        }
     }
 }

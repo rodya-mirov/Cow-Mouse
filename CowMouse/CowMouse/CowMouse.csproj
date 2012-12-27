@@ -114,21 +114,30 @@
     <Compile Include="Buildings\Barrier.cs" />
     <Compile Include="Buildings\Bedroom.cs" />
     <Compile Include="Buildings\Building.cs" />
-    <Compile Include="Buildings\OccupiableZone.cs" />
     <Compile Include="Buildings\Stockpile.cs" />
     <Compile Include="ClockViewer.cs" />
     <Compile Include="CowMouseMapCell.cs" />
     <Compile Include="CowMouseTileMap.cs" />
+    <Compile Include="InGameObjects\BasicResource.cs" />
     <Compile Include="InGameObjects\Carryable.cs" />
     <Compile Include="InGameObjects\InWorldObject.cs" />
+    <Compile Include="InGameObjects\Iron.cs" />
     <Compile Include="InGameObjects\Log.cs" />
     <Compile Include="InGameObjects\DebugPixel.cs" />
     <Compile Include="InGameObjects\Torch.cs" />
     <Compile Include="NPCs\NPC.cs" />
     <Compile Include="NPCs\Person.cs" />
-    <Compile Include="NPCs\Utilities\Task.cs" />
-    <Compile Include="NPCs\Utilities\Task_Carryable.cs" />
-    <Compile Include="NPCs\Utilities\Task_Zone.cs" />
+    <Compile Include="Tasks\FullTaskExtensions\BuildingTask.cs" />
+    <Compile Include="Tasks\FullTaskExtensions\BuildingMaterialTask.cs" />
+    <Compile Include="Tasks\FullTaskExtensions\HaulingTask.cs" />
+    <Compile Include="Tasks\TaskBuilder.cs" />
+    <Compile Include="Tasks\TaskStep.cs" />
+    <Compile Include="Tasks\TaskHeap.cs" />
+    <Compile Include="Tasks\FullTask.cs" />
+    <Compile Include="Tasks\TaskStepExtensions\BuildStep.cs" />
+    <Compile Include="Tasks\TaskStepExtensions\BuildingMaterialStep.cs" />
+    <Compile Include="Tasks\TaskStepExtensions\PickupStep.cs" />
+    <Compile Include="Tasks\TaskStepExtensions\StockpileStep.cs" />
     <Compile Include="TimeKeeper.cs" />
     <Compile Include="UserInterface\SideMenu.cs" />
     <Compile Include="CowMouseComponent.cs" />
@@ -136,7 +145,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="CowMouseGame.cs" />
     <Compile Include="UserInterface\SideMenuButton.cs" />
-    <Compile Include="Utilities\Direction.cs" />
+    <Compile Include="InGameObjects\Utilities\Direction.cs" />
     <Compile Include="WorldManager.cs" />
   </ItemGroup>
   <ItemGroup>
