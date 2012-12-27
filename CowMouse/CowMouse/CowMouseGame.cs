@@ -388,7 +388,7 @@ namespace CowMouse
             int ymin = Math.Min(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
             int ymax = Math.Max(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
 
-            bool valid = WorldManager.IsValidSelection(xmin, xmax, ymin, ymax, IsSelectionBlockedByObjects());
+            bool valid = WorldManager.IsValidSelection(xmin, xmax, ymin, ymax);
 
             WorldManager.SetVisualOverrides(xmin, ymin, xmax, ymax, valid);
         }
@@ -450,7 +450,7 @@ namespace CowMouse
             int ymin = Math.Min(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
             int ymax = Math.Max(MouseClickStartSquare.Y, MouseClickEndSquare.Y);
 
-            if (WorldManager.IsValidSelection(xmin, xmax, ymin, ymax, IsSelectionBlockedByObjects()))
+            if (WorldManager.IsValidSelection(xmin, xmax, ymin, ymax))
             {
                 switch (this.UserMode)
                 {
@@ -473,32 +473,6 @@ namespace CowMouse
                         throw new NotImplementedException();
                 }
             }
-        }
-
-        /// <summary>
-        /// Determines whether the selection indicated by the UserMode
-        /// would be blocked by existing objects (if they touch it).
-        /// </summary>
-        /// <returns></returns>
-        private bool IsSelectionBlockedByObjects()
-        {
-            bool blockedByObjects;
-            switch (UserMode)
-            {
-                case CowMouse.UserMouseMode.MAKE_BARRIER:
-                    blockedByObjects = true;
-                    break;
-
-                case CowMouse.UserMouseMode.MAKE_BEDROOM:
-                case CowMouse.UserMouseMode.MAKE_STOCKPILE:
-                case CowMouse.UserMouseMode.NO_ACTION:
-                    blockedByObjects = false;
-                    break;
-
-                default:
-                    throw new NotImplementedException();
-            }
-            return blockedByObjects;
         }
         #endregion
 

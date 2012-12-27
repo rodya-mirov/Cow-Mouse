@@ -121,6 +121,7 @@
     <Compile Include="InGameObjects\BasicResource.cs" />
     <Compile Include="InGameObjects\Carryable.cs" />
     <Compile Include="InGameObjects\InWorldObject.cs" />
+    <Compile Include="InGameObjects\Iron.cs" />
     <Compile Include="InGameObjects\Log.cs" />
     <Compile Include="InGameObjects\DebugPixel.cs" />
     <Compile Include="InGameObjects\Torch.cs" />

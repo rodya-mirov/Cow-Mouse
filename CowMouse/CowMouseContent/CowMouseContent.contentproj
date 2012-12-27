@@ -70,13 +70,6 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Images\Objects\Logs.png">
-      <Name>Logs</Name>
-      <Importer>TextureImporter</Importer>
-      <Processor>TextureProcessor</Processor>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="Images\Objects\Torch.png">
       <Name>Torch</Name>
       <Importer>TextureImporter</Importer>
@@ -93,6 +86,13 @@
   <ItemGroup>
     <Compile Include="Images\NPCs\TownsWoman1.png">
       <Name>TownsWoman1</Name>
+      <Importer>TextureImporter</Importer>
+      <Processor>TextureProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Images\Tilesets\ResourceTiles.png">
+      <Name>ResourceTiles</Name>
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
     </Compile>

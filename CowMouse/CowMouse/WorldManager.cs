@@ -148,7 +148,7 @@ namespace CowMouse
             torches = new Queue<Torch>();
 
             int radius = 30;
-            makeRandomLogs(radius, -radius, radius, -radius, radius);
+            makeRandomResources(radius, -radius, radius, -radius, radius);
 
             Console.WriteLine("Logged");
 
@@ -179,11 +179,13 @@ namespace CowMouse
             }
         }
 
-        private void makeRandomLogs(int numLogs, int xmin, int xmax, int ymin, int ymax)
+        private void makeRandomResources(int numLogs, int xmin, int xmax, int ymin, int ymax)
         {
             Random r = new Random();
 
             List<Point> placed = new List<Point>(numLogs);
+
+            bool useWood = false;
 
             for (int i = 0; i < numLogs; i++)
             {
@@ -214,7 +216,17 @@ namespace CowMouse
                 }
 
                 placed.Add(p);
-                carryables.Enqueue(new Log(x, y - x, this));
+
+                if (useWood)
+                {
+                    carryables.Enqueue(new Log(x, y - x, this));
+                }
+                else
+                {
+                    carryables.Enqueue(new Iron(x, y - x, this));
+                }
+
+                useWood = !useWood;
             }
         }
         #endregion
@@ -629,7 +641,7 @@ namespace CowMouse
                 {
                     foreach (Carryable car in Carryables)
                     {
-                        if (building.DoesResourceFitNeed(point.X, point.Y, car))
+                        if (car.IsAvailableForUse && building.DoesResourceFitNeed(point.X, point.Y, car))
                             return true;
                     }
                 }
@@ -704,16 +716,13 @@ namespace CowMouse
         /// <summary>
         /// Determines whether the box has positive area.
         /// Also checks if this box overlaps any of the existing buildings.
-        /// If this is marked as "blockable," it will also check if there is
-        /// anything (non-building) which is blocking the current square.
         /// </summary>
         /// <param name="xmin"></param>
         /// <param name="xmax"></param>
         /// <param name="ymin"></param>
         /// <param name="ymax"></param>
-        /// <param name="isBlockedByObjects">Whether or not this should be blocked by objects.</param>
         /// <returns></returns>
-        public bool IsValidSelection(int xmin, int xmax, int ymin, int ymax, bool isBlockedByObjects)
+        public bool IsValidSelection(int xmin, int xmax, int ymin, int ymax)
         {
             if (xmax < xmin)
                 return false;
@@ -725,16 +734,6 @@ namespace CowMouse
             {
                 if (build.OverlapsRectangle(xmin, xmax, ymin, ymax))
                     return false;
-            }
-
-            //If it's a non-passable object, also make sure it doesn't overlap any dudes
-            if (isBlockedByObjects)
-            {
-                foreach (InWorldObject obj in InGameObjects())
-                {
-                    if (obj.SquareBoundingBoxTouches(xmin, ymin, xmax, ymax))
-                        return false;
-                }
             }
 
             return true;

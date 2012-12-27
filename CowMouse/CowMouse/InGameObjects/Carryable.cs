@@ -134,6 +134,11 @@ namespace CowMouse.InGameObjects
         public virtual bool IsWood { get { return false; } }
 
         /// <summary>
+        /// Whether or not this object represents an iron resource.
+        /// </summary>
+        public virtual bool IsIron { get { return false; } }
+
+        /// <summary>
         /// Indicates whether or not this is in a stockpile.
         /// </summary>
         public bool IsInStockpile { get { return currentState == CarryableState.IN_STOCKPILE; } }

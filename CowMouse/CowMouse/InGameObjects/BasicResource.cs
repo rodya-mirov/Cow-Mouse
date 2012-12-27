@@ -96,7 +96,7 @@ namespace CowMouse.InGameObjects
         #endregion
 
         protected static Texture2D resourceTexture { get; set; }
-        protected const string resourceTexturePath = @"Images\Objects\Logs";
+        protected const string resourceTexturePath = @"Images\Tilesets\ResourceTiles";
 
         protected static Rectangle[] sources;
 
@@ -124,8 +124,10 @@ namespace CowMouse.InGameObjects
             if (resourceTexture == null)
                 resourceTexture = game.Content.Load<Texture2D>(resourceTexturePath);
 
-            sources = new Rectangle[1];
+            sources = new Rectangle[2];
+
             sources[0] = new Rectangle(0, 0, 64, 64);
+            sources[1] = new Rectangle(64, 0, 64, 64);
         }
 
         public override Rectangle SourceRectangle
