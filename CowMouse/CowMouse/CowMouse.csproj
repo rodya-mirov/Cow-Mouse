@@ -130,6 +130,7 @@
     <Compile Include="Tasks\FullTaskExtensions\BuildingTask.cs" />
     <Compile Include="Tasks\FullTaskExtensions\BuildingMaterialTask.cs" />
     <Compile Include="Tasks\FullTaskExtensions\HaulingTask.cs" />
+    <Compile Include="Tasks\FullTaskExtensions\SleepingBedroomTask.cs" />
     <Compile Include="Tasks\TaskBuilder.cs" />
     <Compile Include="Tasks\TaskStep.cs" />
     <Compile Include="Tasks\TaskHeap.cs" />
@@ -137,6 +138,7 @@
     <Compile Include="Tasks\TaskStepExtensions\BuildStep.cs" />
     <Compile Include="Tasks\TaskStepExtensions\BuildingMaterialStep.cs" />
     <Compile Include="Tasks\TaskStepExtensions\PickupStep.cs" />
+    <Compile Include="Tasks\TaskStepExtensions\SleepStep.cs" />
     <Compile Include="Tasks\TaskStepExtensions\StockpileStep.cs" />
     <Compile Include="TimeKeeper.cs" />
     <Compile Include="UserInterface\SideMenu.cs" />

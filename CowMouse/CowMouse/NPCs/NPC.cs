@@ -17,7 +17,7 @@ namespace CowMouse.NPCs
         public override bool IsNPC { get { return true; } }
         #endregion
 
-        private static Random ran = new Random();
+        private static Random rng = new Random();
         private const int DEFAULT_SEARCH_DEPTH = 300;
 
         public NPC(int xCoordinate, int yCoordinate, bool usingWorldCoordinates, WorldManager manager)
@@ -32,15 +32,28 @@ namespace CowMouse.NPCs
         /// </summary>
         protected override void aiUpdate(GameTime gameTime)
         {
+            UpdateEnergy();
+
             if (IsThinking)
             {
                 //just hang out and think :)
                 return;
             }
-
             VerifyOrClearPath();
 
-            if (HasMorePath())
+            if (HasDestination)
+            {
+                FollowPath();
+            }
+            else if (IsSleeping)
+            {
+                Sleep();
+            }
+            else if (IsExhausted)
+            {
+                PassOutFromExhaustion();
+            }
+            else if (HasMorePath())
             {
                 FollowPath();
             }
@@ -54,13 +67,23 @@ namespace CowMouse.NPCs
             else if (HasMainTask)
             {
                 if (currentMainTask.HasMoreTasks)
-                {
                     LoadNextPartialTask();
-                }
                 else
-                {
                     currentMainTask = null;
+            }
+            else if (IsTired && AvailableBedroomExists())
+            {
+                Queue<FullTask> tasks = new Queue<FullTask>();
+
+                foreach (Bedroom bedroom in WorldManager.Bedrooms)
+                {
+                    FullTask singleTask = TaskBuilder.MakeSleepingBedroomTask(bedroom, 0);
+                    if (singleTask != null)
+                        tasks.Enqueue(singleTask);
                 }
+
+                thinkingThread = new Thread(() => LoadTask(tasks));
+                StartThinkingThread();
             }
             else if (WorldManager.HasAvailableTasks())
             {
@@ -69,6 +92,97 @@ namespace CowMouse.NPCs
                 StartThinkingThread();
             }
         }
+
+        public override Color Tint
+        {
+            get
+            {
+                if (IsSleeping)
+                    return Color.Blue;
+                else
+                    return Color.White;
+            }
+        }
+
+        #region Energy and Sleeping
+        protected int wakeUpThreshold = 3500 + rng.Next(500);
+        protected int tirednessThreshold = 1500 + rng.Next(250); //constant
+        protected int exhaustionThreshold = 0; //constant
+
+        protected int tirednessPerFrame = -1; //constant
+        protected int sleepingEnergyPerFrame = 2; //constant
+
+        protected int currentEnergy = 500 + rng.Next(1000); //varies
+        protected bool IsSleeping = false;
+
+        protected void UpdateEnergy()
+        {
+            if (IsSleeping)
+                currentEnergy += sleepingEnergyPerFrame;
+            else
+                currentEnergy += tirednessPerFrame;
+        }
+
+        protected bool IsTired
+        {
+            get { return currentEnergy <= tirednessThreshold; }
+        }
+
+        protected bool IsExhausted
+        {
+            get { return currentEnergy <= exhaustionThreshold; }
+        }
+
+        /// <summary>
+        /// Cancels all current tasks and just passes out.
+        /// </summary>
+        protected void PassOutFromExhaustion()
+        {
+            CancelCurrentTask();
+            IsSleeping = true;
+        }
+
+        protected Bedroom currentBedroom;
+
+        /// <summary>
+        /// Bedroom might be null.
+        /// </summary>
+        /// <param name="bedroom"></param>
+        protected void GoToSleep(Bedroom bedroom)
+        {
+            currentBedroom = bedroom;
+
+            if (bedroom != null)
+                bedroom.UseByPerson(SquareCoordinate.X, SquareCoordinate.Y, this, currentMainTask);
+
+            IsSleeping = true;
+        }
+
+        protected void WakeUp()
+        {
+            if (currentBedroom != null)
+                currentBedroom.StopUsingSquare(SquareCoordinate.X, SquareCoordinate.Y, this);
+
+            IsSleeping = false;
+        }
+
+        protected void Sleep()
+        {
+            if (currentEnergy >= wakeUpThreshold)
+                WakeUp();
+        }
+
+        protected bool AvailableBedroomExists()
+        {
+            foreach (Bedroom building in WorldManager.Bedrooms)
+            {
+                if (building.HasAvailableSquare(BuildingInteractionType.USE))
+                    return true;
+            }
+
+            return false;
+        }
+        #endregion
 
         #region Thinking Thread
         private Thread thinkingThread = null;
@@ -79,7 +193,7 @@ namespace CowMouse.NPCs
             thinkingThread.Start();
         }
 
-        private void LoadTask(List<FullTask> tasksToTry)
+        private void LoadTask(IEnumerable<FullTask> tasksToTry)
         {
             Point myPoint = this.SquareCoordinate;
 
@@ -135,14 +249,14 @@ namespace CowMouse.NPCs
 
         private void CancelCurrentTask()
         {
-            if (!HasMainTask || !HasPartialTask)
-                throw new NotImplementedException("I honestly don't know what to do here, but it shouldn't happen yet?");
-
             if (IsCarryingItem)
                 DropCarriedItem();
 
+            ClearPath();
             currentPartialTask = null;
-            currentMainTask.GiveUp();
+
+            if (currentMainTask != null)
+                currentMainTask.GiveUp();
 
             currentMainTask = null;
         }
@@ -161,6 +275,15 @@ namespace CowMouse.NPCs
 
                 case TaskType.BUILD:
                     currentPartialTask.ToBuild.BuildSquare(SquareCoordinate.X, SquareCoordinate.Y, currentMainTask);
+                    break;
+
+                case TaskType.SLEEP:
+                    Bedroom goalBedroom = currentPartialTask.WhereToPlace as Bedroom;
+
+                    if (goalBedroom != null)
+                        goalBedroom.UseByPerson(SquareCoordinate.X, SquareCoordinate.Y, this, currentMainTask);
+
+                    GoToSleep(goalBedroom);
                     break;
 
                 default:

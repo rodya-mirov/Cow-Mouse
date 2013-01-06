@@ -12,10 +12,6 @@ namespace CowMouse.Buildings
     /// </summary>
     public class Barrier : Building
     {
-        #region Tags
-        public override bool Passable { get { return false; } }
-        #endregion
-
         public Barrier(int xMin, int xMax, int yMin, int yMax, WorldManager manager)
             : base(xMin, xMax, yMin, yMax, manager)
         {
@@ -51,7 +47,7 @@ namespace CowMouse.Buildings
         protected override void setSquareToBuilt(int worldX, int worldY)
         {
             WorldManager.MyMap.AddConstructedCell(wallCell, worldX, worldY);
-            SetSquareState(worldX, worldY, CellState.INERT);
+            SetSquareState(worldX, worldY, BuildingInteractionType.NONE, BuildingAvailabilityType.AVAILABLE);
         }
 
         #region Premade cells

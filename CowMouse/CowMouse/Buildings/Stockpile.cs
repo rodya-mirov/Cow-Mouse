@@ -15,7 +15,6 @@ namespace CowMouse.Buildings
     public class Stockpile : Building
     {
         #region Tags
-        public override bool Passable { get { return true; } }
         public override bool IsStockpile { get { return true; } }
         #endregion
 
@@ -49,7 +48,7 @@ namespace CowMouse.Buildings
         protected override void setSquareToBuilt(int worldX, int worldY)
         {
             WorldManager.MyMap.AddConstructedCell(builtCell, worldX, worldY);
-            this.SetSquareState(worldX, worldY, CellState.STORAGE_AVAILABLE);
+            this.SetSquareState(worldX, worldY, BuildingInteractionType.STORAGE, BuildingAvailabilityType.AVAILABLE);
         }
     }
 }

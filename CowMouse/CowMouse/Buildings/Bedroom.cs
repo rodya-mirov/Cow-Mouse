@@ -11,14 +11,19 @@ namespace CowMouse.Buildings
     public class Bedroom : Building
     {
         #region Tags
-        public override bool Passable { get { return true; } }
         public override bool IsBedroom { get { return true; } }
         #endregion
 
         public Bedroom(int xMin, int xMax, int yMin, int yMax, WorldManager manager)
             : base(xMin, xMax, yMin, yMax, manager)
         {
-            addFloors();
+            for (int x = xMin; x <= xMax; x++)
+            {
+                for (int y = yMin; y <= yMax; y++)
+                {
+                    manager.MyMap.AddConstructedCell(unbuiltCell, x, y);
+                }
+            }
         }
 
         #region Building Materials
@@ -33,14 +38,13 @@ namespace CowMouse.Buildings
         }
         #endregion
 
+        private static CowMouseMapCell unbuiltCell = new CowMouseMapCell(31, true);
+        private static CowMouseMapCell builtCell = new CowMouseMapCell(1, true);
+
         protected override void setSquareToBuilt(int worldX, int worldY)
         {
-            throw new NotImplementedException();
-        }
-
-        private void addFloors()
-        {
-            throw new NotImplementedException();
+            WorldManager.MyMap.AddConstructedCell(builtCell, worldX, worldY);
+            this.SetSquareState(worldX, worldY, BuildingInteractionType.USE, BuildingAvailabilityType.AVAILABLE);
         }
     }
 }

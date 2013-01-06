@@ -469,23 +469,14 @@ namespace CowMouse
         {
             Queue<Building> newBuildings = new Queue<Building>();
 
-            bool newWalls = false;
-
             foreach (Building b in buildings)
-            {
                 newBuildings.Enqueue(b);
-                if (!b.Passable)
-                    newWalls = true;
-            }
 
             foreach (Building b in buildingQueue)
                 newBuildings.Enqueue(b);
 
             buildingQueue.Clear();
             this.buildings = newBuildings;
-
-            if (newWalls)
-                this.PassabilityMadeHarder(this.currentTime);
         }
         #endregion
 
@@ -637,7 +628,7 @@ namespace CowMouse
         {
             foreach (Building building in Buildings)
             {
-                foreach (Point point in building.SquaresThatNeedMaterials)
+                foreach (Point point in building.AvailableSquares(BuildingInteractionType.LOAD_BUILDING_MATERIALS))
                 {
                     foreach (Carryable car in Carryables)
                     {
@@ -681,7 +672,7 @@ namespace CowMouse
 
             foreach (Stockpile pile in this.Stockpiles)
             {
-                if (pile.HasFreeSquare())
+                if (pile.HasAvailableSquare(BuildingInteractionType.STORAGE))
                 {
                     stockpileExists = true;
                     break;
@@ -705,7 +696,7 @@ namespace CowMouse
         {
             foreach (Building building in buildings)
             {
-                if (building.HasUnbuiltSquare())
+                if (building.HasAvailableSquare(BuildingInteractionType.BUILD))
                     return true;
             }
 

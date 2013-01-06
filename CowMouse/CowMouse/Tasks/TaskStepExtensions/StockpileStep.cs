@@ -32,8 +32,8 @@ namespace CowMouse.Tasks.TaskStepExtensions
 
         public override void CleanUp()
         {
-            if (WhereToPlace.IsSquareMarkedForStorageBy(EndPoint.X, EndPoint.Y, ParentList))
-                WhereToPlace.UnMarkSquareForStorage(EndPoint.X, EndPoint.Y, ParentList);
+            if (WhereToPlace.IsSquareMarkedByAndFor(EndPoint.X, EndPoint.Y, ParentList, BuildingInteractionType.STORAGE))
+                WhereToPlace.UnMarkSquare(EndPoint.X, EndPoint.Y, ParentList, BuildingInteractionType.STORAGE);
         }
     }
 }

@@ -38,14 +38,14 @@ namespace CowMouse.Tasks.TaskStepExtensions
         /// </summary>
         private void checkIfBuildActionMakesSense()
         {
-            if (!ToBuild.CellIsMarkedForBuildingBy(EndPoint.X, EndPoint.Y, ParentList))
+            if (!ToBuild.IsSquareMarkedByAndFor(EndPoint.X, EndPoint.Y, ParentList, BuildingInteractionType.BUILD))
                 throw new ArgumentException("Cell isn't properly marked for building!");
         }
 
         public override void CleanUp()
         {
-            if (ToBuild.CellIsMarkedForBuildingBy(EndPoint.X, EndPoint.Y, ParentList))
-                ToBuild.UnMarkSquareForBuilding(EndPoint.X, EndPoint.Y, ParentList);
+            if (ToBuild.IsSquareMarkedByAndFor(EndPoint.X, EndPoint.Y, ParentList, BuildingInteractionType.BUILD))
+                ToBuild.UnMarkSquare(EndPoint.X, EndPoint.Y, ParentList, BuildingInteractionType.BUILD);
         }
 
         private Point startPoint;

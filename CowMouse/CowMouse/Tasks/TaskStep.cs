@@ -72,6 +72,8 @@ namespace CowMouse.Tasks
         PICK_UP, //pick up the relevant item
         PUT_DOWN, //put down a carried item in the intended place
 
-        BUILD //do some work!
+        BUILD, //do some work!
+
+        SLEEP //go to sleep!
     }
 }

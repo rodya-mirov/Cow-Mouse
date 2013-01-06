@@ -482,8 +482,16 @@ namespace CowMouse.NPCs
 
             if (foundProblem)
             {
-                QueuedDestinations.Clear();
+                ClearPath();
             }
+        }
+
+        /// <summary>
+        /// Clears out the stored path.
+        /// </summary>
+        protected void ClearPath()
+        {
+            QueuedDestinations.Clear();
         }
 
         /// <summary>

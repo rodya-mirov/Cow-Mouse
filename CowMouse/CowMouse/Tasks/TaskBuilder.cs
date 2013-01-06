@@ -48,13 +48,13 @@ namespace CowMouse.Tasks
             //mark all the stockpiles
             foreach (Stockpile pile in manager.Stockpiles)
             {
-                if (pile.HasFreeSquare())
+                if (pile.HasAvailableSquare(BuildingInteractionType.STORAGE))
                 {
-                    Point point = pile.GetNextFreeSquare();
+                    Point point = pile.GetNextAvailableSquare(BuildingInteractionType.STORAGE);
 
                     stockpileLocations.Add(point);
 
-                    pile.MarkSquareForStorage(point.X, point.Y, outputTaskList);
+                    pile.MarkSquare(point.X, point.Y, outputTaskList, BuildingInteractionType.STORAGE);
                     markedStockpiles.Add(new Tuple<Point, Stockpile>(point, pile));
                 }
             }
@@ -69,7 +69,7 @@ namespace CowMouse.Tasks
                     tup.Item2.UnMarkForCollection(outputTaskList);
 
                 foreach (Tuple<Point, Stockpile> tup in markedStockpiles)
-                    tup.Item2.UnMarkSquareForStorage(tup.Item1.X, tup.Item1.Y, outputTaskList);
+                    tup.Item2.UnMarkSquare(tup.Item1.X, tup.Item1.Y, outputTaskList, BuildingInteractionType.STORAGE);
 
                 //and give up
                 return null;
@@ -102,7 +102,7 @@ namespace CowMouse.Tasks
                     if (goalPile == null && tup.Item1 == foundPath.End)
                         goalPile = tup;
                     else
-                        tup.Item2.UnMarkSquareForStorage(tup.Item1.X, tup.Item1.Y, outputTaskList);
+                        tup.Item2.UnMarkSquare(tup.Item1.X, tup.Item1.Y, outputTaskList, BuildingInteractionType.STORAGE);
                 }
 
                 if (goalPile == null)
@@ -128,19 +128,19 @@ namespace CowMouse.Tasks
 
             foreach (Building candidate in worldManager.Buildings)
             {
-                if (candidate.HasUnbuiltSquare())
+                if (candidate.HasAvailableSquare(BuildingInteractionType.BUILD))
                 {
                     foundSuccess = true;
                     building = candidate;
-                    buildPoint = candidate.GetNextUnbuiltSquare();
+                    buildPoint = candidate.GetNextAvailableSquare(BuildingInteractionType.BUILD);
                     break;
                 }
             }
 
             if (!foundSuccess)
                 return null;
-            
-            building.MarkSquareForBuilding(buildPoint.X, buildPoint.Y, output);
+
+            building.MarkSquare(buildPoint.X, buildPoint.Y, output, BuildingInteractionType.BUILD);
             TaskStep step = new BuildStep(buildPoint, building, output);
             output.AddNewTask(step);
 
@@ -159,9 +159,9 @@ namespace CowMouse.Tasks
 
             foreach (Building building in manager.Buildings)
             {
-                foreach (Point point in building.SquaresThatNeedMaterials)
+                foreach (Point point in building.AvailableSquares(BuildingInteractionType.LOAD_BUILDING_MATERIALS))
                 {
-                    building.MarkSquareForMaterials(point.X, point.Y, task);
+                    building.MarkSquare(point.X, point.Y, task, BuildingInteractionType.LOAD_BUILDING_MATERIALS);
 
                     validResources.Clear();
                     startPoints.Clear();
@@ -185,7 +185,7 @@ namespace CowMouse.Tasks
 
                     if (!foundValidResource) //clean up, move on
                     {
-                        building.UnMarkSquareForMaterials(point.X, point.Y, task);
+                        building.UnMarkSquare(point.X, point.Y, task, BuildingInteractionType.LOAD_BUILDING_MATERIALS);
                         continue;
                     }
 
@@ -195,9 +195,9 @@ namespace CowMouse.Tasks
                     //if no path, clean up and move on
                     if (pathFromResourceToBuildingCell == null)
                     {
-                        building.UnMarkSquareForMaterials(point.X, point.Y, task);
+                        building.UnMarkSquare(point.X, point.Y, task, BuildingInteractionType.LOAD_BUILDING_MATERIALS);
 
-                        foreach(Carryable car in validResources)
+                        foreach (Carryable car in validResources)
                             car.UnMarkForCollection(task);
 
                         continue;
@@ -231,6 +231,23 @@ namespace CowMouse.Tasks
             }
 
             return null;
+        }
+
+        public static FullTask MakeSleepingBedroomTask(Bedroom bedroom, int priority)
+        {
+            if (!bedroom.HasAvailableSquare(BuildingInteractionType.USE))
+                return null;
+
+            FullTask outputTask = new SleepingBedroomTask(priority);
+
+            Point markedPoint = bedroom.GetNextAvailableSquare(BuildingInteractionType.USE);
+            bedroom.MarkSquare(markedPoint.X, markedPoint.Y, outputTask, BuildingInteractionType.USE);
+
+            TaskStep step = new SleepStep(markedPoint, bedroom, outputTask);
+            outputTask.AddNewTask(step);
+
+            outputTask.Freeze();
+            return outputTask;
         }
     }
 }

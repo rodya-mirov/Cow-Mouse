@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using CowMouse.Tasks;
 using CowMouse.InGameObjects;
+using CowMouse.NPCs;
 
 namespace CowMouse.Buildings
 {
@@ -18,15 +19,15 @@ namespace CowMouse.Buildings
     /// </summary>
     public abstract class Building
     {
+        public WorldManager WorldManager { get; protected set; }
+
+        #region Dimensions
         public int XMin { get; protected set; }
         public int YMin { get; protected set; }
 
         public int XMax { get; protected set; }
         public int YMax { get; protected set; }
 
-        public WorldManager WorldManager { get; protected set; }
-
-        #region Dimensions
         /// <summary>
         /// How many columns are in this building.  Note this
         /// is XMax-XMin+1, since XMax is a valid index.
@@ -43,7 +44,6 @@ namespace CowMouse.Buildings
         /// How many squares are in this building.
         /// </summary>
         public int Area { get { return Width * Height; } }
-        #endregion
 
         /// <summary>
         /// Determines the distance from this building to the
@@ -71,9 +71,9 @@ namespace CowMouse.Buildings
 
             return xdist + ydist;
         }
+        #endregion
 
         #region Tags
-        public abstract bool Passable { get; }
         public virtual bool IsStockpile { get { return false; } }
         public virtual bool IsBedroom { get { return false; } }
         #endregion
@@ -91,12 +91,6 @@ namespace CowMouse.Buildings
             InitializeSquareStates();
         }
 
-        /// <summary>
-        /// How many frames it takes to build a single square in this building,
-        /// ignoring hauling, etc. time.
-        /// </summary>
-        public virtual int SquareBuildTime { get { return 45; } }
-
         #region Cell Containment
         /// <summary>
         /// Determines whether or not this Building contains a specific cell,
@@ -105,7 +99,7 @@ namespace CowMouse.Buildings
         /// <param name="worldX"></param>
         /// <param name="worldY"></param>
         /// <returns></returns>
-        public virtual bool ContainsCell(int worldX, int worldY)
+        public virtual bool ContainsSquare(int worldX, int worldY)
         {
             return XMin <= worldX && worldX <= XMax
                 && YMin <= worldY && worldY <= YMax;
@@ -161,13 +155,16 @@ namespace CowMouse.Buildings
             //does nothing by default
         }
 
-        protected CellState[,] squareStates;
-        protected Dictionary<CellState, int> stateCounts;
+        protected BuildingInteractionType[,] squareActionModes;
+        protected BuildingAvailabilityType[,] squareAvailabilityModes;
+
+        protected Dictionary<Tuple<BuildingInteractionType, BuildingAvailabilityType>, int> modeCounts;
 
         protected FullTask[,] markers;
         protected InWorldObject[,] occupants;
+        protected Person[,] users;
 
-        protected InWorldObject[,,] materials;
+        protected InWorldObject[, ,] materials;
         protected int[,] materialIndices;
 
         /// <summary>
@@ -176,37 +173,115 @@ namespace CowMouse.Buildings
         /// </summary>
         protected void InitializeSquareStates()
         {
-            CellState startState = CellState.UNBUILT_READY_FOR_MATERIALS;
-            if (NumberOfMaterialsPerSquare <= 0)
-                startState = CellState.UNBUILT_READY_TO_BUILD;
+            BuildingInteractionType startMode;
+            if (NumberOfMaterialsPerSquare == 0)
+                startMode = BuildingInteractionType.BUILD;
+            else if (NumberOfMaterialsPerSquare > 0)
+                startMode = BuildingInteractionType.LOAD_BUILDING_MATERIALS;
+            else
+                throw new NotImplementedException();
 
-            int width = XMax - XMin + 1;
-            int height = YMax - YMin + 1;
+            squareActionModes = new BuildingInteractionType[Width, Height];
+            squareAvailabilityModes = new BuildingAvailabilityType[Width, Height];
 
-            squareStates = new CellState[width, height];
-
-            for (int x = 0; x < width; x++)
+            for (int x = 0; x < Width; x++)
             {
-                for (int y = 0; y < height; y++)
+                for (int y = 0; y < Height; y++)
                 {
-                    squareStates[x, y] = startState;
+                    squareActionModes[x, y] = startMode;
+                    squareAvailabilityModes[x, y] = BuildingAvailabilityType.AVAILABLE;
                 }
             }
 
-            stateCounts = new Dictionary<CellState, int>();
+            modeCounts = new Dictionary<Tuple<BuildingInteractionType, BuildingAvailabilityType>, int>();
 
-            foreach (CellState state in Enum.GetValues((typeof(CellState))))
+            foreach (BuildingAvailabilityType bat in Enum.GetValues((typeof(BuildingAvailabilityType))))
             {
-                stateCounts[state] = 0;
+                foreach (BuildingInteractionType bit in Enum.GetValues((typeof(BuildingInteractionType))))
+                {
+                    modeCounts[Tuple.Create(bit, bat)] = 0;
+                }
             }
 
-            stateCounts[startState] = Area;
+            modeCounts[Tuple.Create(startMode, BuildingAvailabilityType.AVAILABLE)] = Area;
 
             markers = new FullTask[Width, Height];
             occupants = new InWorldObject[Width, Height];
+            users = new Person[Width, Height];
 
             materials = new InWorldObject[Width, Height, NumberOfMaterialsPerSquare];
             materialIndices = new int[Width, Height];
+        }
+
+        /// <summary>
+        /// Returns true if the specified square is marked by "marker" and is intended for the interaction type "bit."
+        /// Returns false otherwise.
+        /// 
+        /// Throws a fit if (worldX,worldY) are not in the building.
+        /// </summary>
+        /// <param name="worldX"></param>
+        /// <param name="worldY"></param>
+        /// <param name="marker"></param>
+        /// <param name="bit"></param>
+        /// <returns></returns>
+        public bool IsSquareMarkedByAndFor(int worldX, int worldY, FullTask marker, BuildingInteractionType bit)
+        {
+            if (!this.ContainsSquare(worldX, worldY))
+                throw new InvalidOperationException("Cell is not in the building.");
+
+            int localX = worldX - XMin;
+            int localY = worldY - YMin;
+
+            if (squareAvailabilityModes[localX, localY] != BuildingAvailabilityType.MARKED)
+                return false;
+
+            return markers[localX, localY] == marker;
+        }
+
+        /// <summary>
+        /// Marks the square for use by the specified marker.  Current interaction type must match the
+        /// supplied parameter, and the square supplied must be available.
+        /// </summary>
+        /// <param name="worldX"></param>
+        /// <param name="worldY"></param>
+        /// <param name="marker"></param>
+        /// <param name="bit"></param>
+        public void MarkSquare(int worldX, int worldY, FullTask marker, BuildingInteractionType bit)
+        {
+            if (!this.ContainsSquare(worldX, worldY))
+                throw new InvalidOperationException("Cell is not in building.");
+
+            int localX = worldX - XMin;
+            int localY = worldY - YMin;
+
+            BuildingInteractionType currentBit = squareActionModes[localX, localY];
+            BuildingAvailabilityType currentBat = squareAvailabilityModes[localX, localY];
+
+            if (currentBit != bit || currentBat != BuildingAvailabilityType.AVAILABLE)
+                throw new InvalidOperationException("Building is not available for use as " + bit.ToString());
+
+            SetSquareState(worldX, worldY, bit, BuildingAvailabilityType.MARKED);
+            markers[localX, localY] = marker;
+        }
+
+        /// <summary>
+        /// Unmarks the square for use by the specified marker.  Current interaction type must match the
+        /// supplied parameter, and the square must be marked for the specified task.
+        /// </summary>
+        /// <param name="worldX"></param>
+        /// <param name="worldY"></param>
+        /// <param name="marker"></param>
+        /// <param name="bit"></param>
+        public void UnMarkSquare(int worldX, int worldY, FullTask marker, BuildingInteractionType bit)
+        {
+            if (!this.IsSquareMarkedByAndFor(worldX, worldY, marker, bit))
+                throw new InvalidOperationException("Can't unmark without marking!");
+
+            int localX = worldX - XMin;
+            int localY = worldY - YMin;
+
+            SetSquareState(worldX, worldY, bit, BuildingAvailabilityType.AVAILABLE);
+            markers[localX, localY] = null;
         }
 
         #region Materials for Building
@@ -227,14 +302,13 @@ namespace CowMouse.Buildings
 
         public bool DoesResourceFitNeed(int worldX, int worldY, InWorldObject resource)
         {
-            if (!this.ContainsCell(worldX, worldY))
+            if (!this.ContainsSquare(worldX, worldY))
                 throw new ArgumentOutOfRangeException("Invalid cell.");
 
             int localX = worldX - XMin;
             int localY = worldY - YMin;
 
-            if (squareStates[localX, localY] != CellState.UNBUILT_READY_FOR_MATERIALS &&
-                squareStates[localX, localY] != CellState.UNBUILT_MARKED_FOR_MATERIALS)
+            if (squareActionModes[localX, localY] != BuildingInteractionType.LOAD_BUILDING_MATERIALS)
                 throw new InvalidOperationException("Don't even need resources ...");
 
             return DoesResourceFitNeed(resource, materialIndices[localX, localY]);
@@ -247,15 +321,19 @@ namespace CowMouse.Buildings
         /// </summary>
         /// <param name="worldX"></param>
         /// <param name="worldY"></param>
-        /// <param name="state"></param>
-        protected void SetSquareState(int worldX, int worldY, CellState state)
+        /// <param name="bit"></param>
+        /// <param name="bat"></param>
+        protected void SetSquareState(int worldX, int worldY, BuildingInteractionType bit, BuildingAvailabilityType bat)
         {
             int x = worldX - XMin;
             int y = worldY - YMin;
 
-            stateCounts[squareStates[x, y]] -= 1;
-            squareStates[x, y] = state;
-            stateCounts[squareStates[x, y]] += 1;
+            modeCounts[Tuple.Create(squareActionModes[x, y], squareAvailabilityModes[x, y])] -= 1;
+
+            squareAvailabilityModes[x, y] = bat;
+            squareActionModes[x, y] = bit;
+
+            modeCounts[Tuple.Create(bit, bat)] += 1;
         }
 
         /// <summary>
@@ -267,25 +345,33 @@ namespace CowMouse.Buildings
         /// <param name="worldObject"></param>
         public void ReceiveObject(int worldX, int worldY, Carryable worldObject, FullTask marker)
         {
-            if (!this.ContainsCell(worldX, worldY))
+            if (!this.ContainsSquare(worldX, worldY))
                 throw new ArgumentOutOfRangeException("This building does not contain the specified cell!");
 
             int localX = worldX - XMin;
             int localY = worldY - YMin;
 
-            switch (squareStates[localX, localY])
+            if (squareAvailabilityModes[localX, localY] != BuildingAvailabilityType.MARKED)
+                throw new NotImplementedException("Can't send an object without marking the square first.");
+
+            switch (squareActionModes[localX, localY])
             {
-                case CellState.STORAGE_MARKED:
-                    if (!IsSquareMarkedForStorageBy(worldX, worldY, marker))
+                case BuildingInteractionType.STORAGE:
+                    if (!IsSquareMarkedByAndFor(worldX, worldY, marker, BuildingInteractionType.STORAGE))
                         throw new InvalidOperationException("Cell is not marked for storage by this marker, so cannot be used for storage by this marker!");
 
-                    OccupySquareForStorage(worldX, worldY, marker, worldObject);
+                    if (!IsSquareMarkedByAndFor(worldX, worldY, marker, BuildingInteractionType.STORAGE))
+                        throw new InvalidOperationException("Can't occupy without marking!");
+
+                    SetSquareState(worldX, worldY, BuildingInteractionType.STORAGE, BuildingAvailabilityType.IN_USE);
+                    occupants[localX, localY] = worldObject;
+
                     worldObject.GetPutInStockpile();
 
                     break;
 
-                case CellState.UNBUILT_MARKED_FOR_MATERIALS:
-                    if (!IsSquareMarkedForMaterialsBy(worldX, worldY, marker))
+                case BuildingInteractionType.LOAD_BUILDING_MATERIALS:
+                    if (!IsSquareMarkedByAndFor(worldX, worldY, marker, BuildingInteractionType.LOAD_BUILDING_MATERIALS))
                         throw new InvalidOperationException("Wrong marker or coordinate.");
 
                     materials[localX, localY, materialIndices[localX, localY]] = worldObject;
@@ -294,38 +380,84 @@ namespace CowMouse.Buildings
                     worldObject.GetUsedAsMaterial();
 
                     if (materialIndices[localX, localY] == NumberOfMaterialsPerSquare)
-                        this.SetSquareState(worldX, worldY, CellState.UNBUILT_READY_TO_BUILD);
+                        this.SetSquareState(worldX, worldY, BuildingInteractionType.BUILD, BuildingAvailabilityType.AVAILABLE);
                     else
-                        this.SetSquareState(worldX, worldY, CellState.UNBUILT_READY_FOR_MATERIALS);
+                        this.SetSquareState(worldX, worldY, BuildingInteractionType.LOAD_BUILDING_MATERIALS, BuildingAvailabilityType.AVAILABLE);
 
                     break;
+
                 default:
-                    throw new InvalidOperationException("Can't receive object in the state " + squareStates[localX, localY].ToString());
+                    throw new NotImplementedException("Unclear how to receive an object in state " + squareActionModes[localX, localY]);
             }
         }
 
-        #region Building the Building
         /// <summary>
-        /// Determines whether or not there is an unbuilt square.
+        /// Sets the specified square to being used by the specified person.  Requires marking first.
         /// </summary>
-        /// <returns></returns>
-        public bool HasUnbuiltSquare()
+        /// <param name="worldX"></param>
+        /// <param name="worldY"></param>
+        /// <param name="user"></param>
+        /// <param name="marker"></param>
+        public void UseByPerson(int worldX, int worldY, Person user, FullTask marker)
         {
-            return stateCounts[CellState.UNBUILT_READY_TO_BUILD] > 0;
+            if (!IsSquareMarkedByAndFor(worldX, worldY, marker, BuildingInteractionType.USE))
+                throw new InvalidOperationException("Can't use what you didn't mark!");
+
+            int localX = worldX - XMin;
+            int localY = worldY - YMin;
+
+            SetSquareState(worldX, worldY, BuildingInteractionType.USE, BuildingAvailabilityType.IN_USE);
+            users[localX, localY] = user;
+        }
+
+        /// <summary>
+        /// Stops using the specified square.  Obvious preconditions.
+        /// </summary>
+        /// <param name="worldX"></param>
+        /// <param name="worldY"></param>
+        /// <param name="user"></param>
+        public void StopUsingSquare(int worldX, int worldY, Person user)
+        {
+            if (!this.ContainsSquare(worldX, worldY))
+                throw new InvalidOperationException("Square out of bounds!");
+
+            int localX = worldX - XMin;
+            int localY = worldY - YMin;
+
+            BuildingAvailabilityType currentBat = squareAvailabilityModes[localX, localY];
+            BuildingInteractionType currentBit = squareActionModes[localX, localY];
+
+            if (currentBat != BuildingAvailabilityType.IN_USE || currentBit != BuildingInteractionType.USE || users[localX, localY] != user)
+                throw new InvalidOperationException("Square was not being used by the specified user!");
+
+            users[localX, localY] = null;
+            SetSquareState(worldX, worldY, BuildingInteractionType.USE, BuildingAvailabilityType.AVAILABLE);
+        }
+
+        /// <summary>
+        /// Whether or not there is a square in this building which is available for the supplied interaction type.
+        /// </summary>
+        /// <param name="bit"></param>
+        /// <returns></returns>
+        public bool HasAvailableSquare(BuildingInteractionType bit)
+        {
+            return modeCounts[Tuple.Create(bit, BuildingAvailabilityType.AVAILABLE)] > 0;
         }
 
         /// <summary>
         /// Returns the world coordinates for the next unbuilt
-        /// square.  Throws a fit if there are none.
+        /// square which is available for the specified interaction.  Throws a fit
+        /// if none exist.
         /// </summary>
+        /// <param name="bit"></param>
         /// <returns></returns>
-        public Point GetNextUnbuiltSquare()
+        public Point GetNextAvailableSquare(BuildingInteractionType bit)
         {
             for (int x = 0; x < Width; x++)
             {
                 for (int y = 0; y < Height; y++)
                 {
-                    if (squareStates[x, y] == CellState.UNBUILT_READY_TO_BUILD)
+                    if (squareActionModes[x, y] == bit && squareAvailabilityModes[x, y] == BuildingAvailabilityType.AVAILABLE)
                     {
                         return new Point(x + XMin, y + YMin);
                     }
@@ -335,61 +467,23 @@ namespace CowMouse.Buildings
             throw new InvalidOperationException("There are no unbuilt squares!  Check first!");
         }
 
-        public void MarkSquareForBuilding(int worldX, int worldY, FullTask marker)
-        {
-            if (!this.ContainsCell(worldX, worldY))
-                throw new ArgumentOutOfRangeException("Cell is not in the building.");
-
-            CellState state = squareStates[worldX - XMin, worldY - YMin];
-
-            if (state != CellState.UNBUILT_READY_TO_BUILD)
-                throw new InvalidOperationException("This cell is not available for building.");
-
-            this.SetSquareState(worldX, worldY, CellState.UNBUILT_MARKED_FOR_BUILDING);
-            markers[worldX - XMin, worldY - YMin] = marker;
-        }
-
-        public void MarkSquareForMaterials(int worldX, int worldY, FullTask marker)
-        {
-            if (!this.ContainsCell(worldX, worldY))
-                throw new ArgumentOutOfRangeException("Cell is not in the building.");
-
-            CellState state = squareStates[worldX - XMin, worldY - YMin];
-
-            if (state != CellState.UNBUILT_READY_FOR_MATERIALS)
-                throw new InvalidOperationException("This cell is not available for building materials.");
-
-            this.SetSquareState(worldX, worldY, CellState.UNBUILT_MARKED_FOR_MATERIALS);
-            markers[worldX - XMin, worldY - YMin] = marker;
-        }
-
         /// <summary>
-        /// Returns true when the specified cell is in the building, marked for building,
-        /// and the associated marker is the specified argument.  Returns false if any
-        /// of these are not satisfied.
+        /// Enumerate all squares which are available for the specified interaction type.
         /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <param name="marker"></param>
+        /// <param name="bit"></param>
         /// <returns></returns>
-        public bool CellIsMarkedForBuildingBy(int worldX, int worldY, FullTask marker)
+        public IEnumerable<Point> AvailableSquares(BuildingInteractionType bit)
         {
-            if (!this.ContainsCell(worldX, worldY))
-                return false;
-
-            if (squareStates[worldX - XMin, worldY - YMin] != CellState.UNBUILT_MARKED_FOR_BUILDING)
-                return false;
-
-            return markers[worldX - XMin, worldY - YMin] == marker;
-        }
-
-        public void UnMarkSquareForBuilding(int worldX, int worldY, FullTask marker)
-        {
-            if (!this.CellIsMarkedForBuildingBy(worldX, worldY, marker))
-                throw new InvalidOperationException("Can't unmark it if you didn't mark it!");
-
-            this.SetSquareState(worldX, worldY, CellState.UNBUILT_READY_TO_BUILD);
-            this.markers[worldX - XMin, worldY - YMin] = null;
+            for (int x = 0; x < Width; x++)
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    if (squareActionModes[x, y] == bit && squareAvailabilityModes[x, y] == BuildingAvailabilityType.AVAILABLE)
+                    {
+                        yield return new Point(x + XMin, y + YMin);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -401,10 +495,10 @@ namespace CowMouse.Buildings
         /// <param name="worldY"></param>
         public void BuildSquare(int worldX, int worldY, FullTask marker)
         {
-            if (!this.ContainsCell(worldX, worldY))
+            if (!this.ContainsSquare(worldX, worldY))
                 throw new ArgumentOutOfRangeException("The specified cell is not in the building!");
 
-            if (!this.CellIsMarkedForBuildingBy(worldX, worldY, marker))
+            if (!this.IsSquareMarkedByAndFor(worldX, worldY, marker, BuildingInteractionType.BUILD))
                 throw new InvalidOperationException("Have to mark the square first!");
 
             setSquareToBuilt(worldX, worldY);
@@ -417,286 +511,23 @@ namespace CowMouse.Buildings
         /// <param name="worldX"></param>
         /// <param name="worldY"></param>
         protected abstract void setSquareToBuilt(int worldX, int worldY);
-        #endregion
-
-        //The following region contains a lot (probably too many) very simple
-        //and very similar method for fiddling with using this building as
-        //a storage place.
-
-        #region Storage and Occupation
-        /// <summary>
-        /// Determines whether or not there is a square which is 
-        /// available for storage.
-        /// </summary>
-        /// <returns></returns>
-        public bool HasFreeSquare()
-        {
-            return stateCounts[CellState.STORAGE_AVAILABLE] > 0;
-        }
-
-        /// <summary>
-        /// Gets the next free (un-marked, un-occupied) square.
-        /// Throws an Exception if there are none (check first!)
-        /// </summary>
-        /// <returns></returns>
-        public Point GetNextFreeSquare()
-        {
-            for (int x = 0; x < Width; x++)
-            {
-                for (int y = 0; y < Height; y++)
-                {
-                    if (squareStates[x, y] == CellState.STORAGE_AVAILABLE)
-                    {
-                        return new Point(x + XMin, y + YMin);
-                    }
-                }
-            }
-
-            throw new InvalidOperationException("There are no free squares!  Check first!");
-        }
-
-        /// <summary>
-        /// Determines if the specified square is free.
-        /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <returns></returns>
-        public bool IsSquareFreeForStorage(int worldX, int worldY)
-        {
-            int x = worldX - XMin;
-            int y = worldY - YMin;
-
-            return squareStates[x, y] == CellState.STORAGE_AVAILABLE;
-        }
-
-        /// <summary>
-        /// Determines if the specified square is marked.
-        /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <returns></returns>
-        public bool IsSquareMarkedForStorage(int worldX, int worldY)
-        {
-            return squareStates[worldX - XMin, worldY - YMin] == CellState.STORAGE_MARKED;
-        }
-
-        public bool IsSquareMarkedForMaterials(int worldX, int worldY)
-        {
-            return squareStates[worldX - XMin, worldY - YMin] == CellState.UNBUILT_MARKED_FOR_MATERIALS;
-        }
-
-        /// <summary>
-        /// Determines whether the specified square is marked,
-        /// and if so, whether it's marked by the supplied object.
-        /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <param name="marker"></param>
-        /// <returns></returns>
-        public bool IsSquareMarkedForStorageBy(int worldX, int worldY, FullTask marker)
-        {
-            return IsSquareMarkedForStorage(worldX, worldY) &&
-                this.markers[worldX - XMin, worldY - YMin] == marker;
-        }
-
-        public bool IsSquareMarkedForMaterialsBy(int worldX, int worldY, FullTask marker)
-        {
-            return IsSquareMarkedForMaterials(worldX, worldY) &&
-                this.markers[worldX - XMin, worldY - YMin] == marker;
-        }
-
-        /// <summary>
-        /// Determines if the specified square is occupied.
-        /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <returns></returns>
-        public bool IsSquareOccupiedByStorage(int worldX, int worldY)
-        {
-            return squareStates[worldX - XMin, worldY - YMin] == CellState.STORAGE_OCCUPIED;
-        }
-
-        /// <summary>
-        /// Determines whether the specified square is occupied,
-        /// and if so, whether it's occupied by the supplied object.
-        /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <param name="occupant"></param>
-        /// <returns></returns>
-        public bool IsSquareOccupiedForStorageBy(int worldX, int worldY, InWorldObject occupant)
-        {
-            return IsSquareOccupiedByStorage(worldX, worldY) &&
-                this.occupants[worldX - XMin, worldY - YMin] == occupant;
-        }
-
-        /// <summary>
-        /// Returns the marker of the specified square.
-        /// Throws a fit if the square is not marked.
-        /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <returns></returns>
-        protected FullTask MarkerAt(int worldX, int worldY)
-        {
-            int x = worldX - XMin;
-            int y = worldY - YMin;
-
-            if (squareStates[x, y] != CellState.STORAGE_MARKED && squareStates[x, y] != CellState.UNBUILT_MARKED_FOR_BUILDING)
-                throw new InvalidOperationException("Square is not marked!");
-
-            return markers[x, y];
-        }
-
-        /// <summary>
-        /// Returns the occupant of the specified square.
-        /// Throws a fit if the square is not occupied.
-        /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <returns></returns>
-        public InWorldObject StorageOccupant(int worldX, int worldY)
-        {
-            if (!this.ContainsCell(worldX, worldY))
-                throw new ArgumentOutOfRangeException("This does not contain the specified cell.");
-
-            int localX = worldX - XMin;
-            int localY = worldY - YMin;
-
-            if (squareStates[localX, localY] != CellState.STORAGE_OCCUPIED)
-                throw new InvalidOperationException("Square is not occupied!");
-
-            return occupants[localX, localY];
-        }
-
-        /// <summary>
-        /// Marks a specific square as "taken" by the person of interest.
-        /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <param name="marker"></param>
-        public void MarkSquareForStorage(int worldX, int worldY, FullTask marker)
-        {
-            int x = worldX - XMin;
-            int y = worldY - YMin;
-
-            if (squareStates[x, y] != CellState.STORAGE_AVAILABLE)
-                throw new InvalidOperationException("Can't mark a non-free square!");
-
-            SetSquareState(worldX, worldY, CellState.STORAGE_MARKED);
-
-            markers[x, y] = marker;
-        }
-
-        /// <summary>
-        /// Unmarks the specified square.  Throws the usual invalidoperation fits
-        /// when the arguments are wrong, in addition to a new fit if the supplied
-        /// object isn't the one who marked it in the first place.
-        /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <param name="marker"></param>
-        public void UnMarkSquareForStorage(int worldX, int worldY, FullTask marker)
-        {
-            int x = worldX - XMin;
-            int y = worldY - YMin;
-
-            if (markers[x, y] != marker)
-                throw new InvalidOperationException("The supplied object is not the one who marked the square!");
-            if (squareStates[x, y] != CellState.STORAGE_MARKED)
-                throw new InvalidOperationException("Can't unmark an unmarked square!");
-
-            SetSquareState(worldX, worldY, CellState.STORAGE_AVAILABLE);
-            markers[x, y] = null;
-        }
-
-        public void UnMarkSquareForMaterials(int worldX, int worldY, FullTask marker)
-        {
-            int x = worldX - XMin;
-            int y = worldY - YMin;
-
-            if (markers[x, y] != marker)
-                throw new InvalidOperationException("The supplied object is not the one who marked the square!");
-            if (squareStates[x, y] != CellState.UNBUILT_MARKED_FOR_MATERIALS)
-                throw new InvalidOperationException("Can't unmark an unmarked square!");
-
-            SetSquareState(worldX, worldY, CellState.UNBUILT_READY_FOR_MATERIALS);
-            markers[x, y] = null;
-        }
-
-        /// <summary>
-        /// Occupies the specified square.  Throws a fit when it's not marked,
-        /// or if the specified marker is not the marker we recognized.
-        /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <param name="marker"></param>
-        /// <param name="occupant"></param>
-        protected void OccupySquareForStorage(int worldX, int worldY, FullTask marker, InWorldObject occupant)
-        {
-            if (!IsSquareMarkedForStorageBy(worldX, worldY, marker))
-                throw new InvalidOperationException("Gotta mark it before you can use it!");
-
-            int x = worldX - XMin;
-            int y = worldY - YMin;
-
-            SetSquareState(worldX, worldY, CellState.STORAGE_OCCUPIED);
-            occupants[x, y] = occupant;
-        }
-
-        /// <summary>
-        /// Sets the specified square as unoccupied.  Throws a fit unless the
-        /// square is currently occupied and the specified argument is the one
-        /// sitting there.
-        /// </summary>
-        /// <param name="worldX"></param>
-        /// <param name="worldY"></param>
-        /// <param name="occupant"></param>
-        public void UnOccupySquare(int worldX, int worldY, InWorldObject occupant)
-        {
-            int x = worldX - XMin;
-            int y = worldY - YMin;
-
-            if (squareStates[x, y] != CellState.STORAGE_OCCUPIED)
-                throw new InvalidOperationException("Can't un-occupy an unoccupied square!");
-
-            SetSquareState(worldX, worldY, CellState.STORAGE_AVAILABLE);
-            occupants[x, y] = null;
-        }
-        #endregion
-
-        public IEnumerable<Point> SquaresThatNeedMaterials
-        {
-            get
-            {
-                for (int localX = 0; localX < Width; localX++)
-                {
-                    for (int localY = 0; localY < Height; localY++)
-                    {
-                        if (squareStates[localX, localY] == CellState.UNBUILT_READY_FOR_MATERIALS)
-                            yield return new Point(localX + XMin, localY + YMin);
-                    }
-                }
-            }
-        }
     }
 
-    /// <summary>
-    /// Describes the current state of a square of the building
-    /// </summary>
-    public enum CellState
+    public enum BuildingInteractionType
     {
-        UNBUILT_READY_FOR_MATERIALS, //unbuilt, needs materials
-        UNBUILT_MARKED_FOR_MATERIALS, //unbuilt, but has been marked for material delivery
+        LOAD_BUILDING_MATERIALS,
+        BUILD,
 
-        UNBUILT_READY_TO_BUILD, //has not been built, but has all its materials
-        UNBUILT_MARKED_FOR_BUILDING, //has not been built, but someone is getting stuff for it
-        UNBUILT_BUILDING, //has not bee built, but someone is working on it
+        STORAGE,
+        USE,
 
-        STORAGE_AVAILABLE, //available for storage with no complications
-        STORAGE_MARKED, //available for storage, but someone has called dibs
-        STORAGE_OCCUPIED, //currently used for storage, is occupied
+        NONE
+    }
 
-        INERT //doesn't really do anything :/
+    public enum BuildingAvailabilityType
+    {
+        AVAILABLE,
+        MARKED,
+        IN_USE
     }
 }
