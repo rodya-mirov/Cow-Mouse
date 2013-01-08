@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 using CowMouse.Buildings;
 using CowMouse.Tasks;
 
-namespace CowMouse.InGameObjects
+namespace CowMouse.InGameObjects.Resources
 {
     public class Log : BasicResource
     {

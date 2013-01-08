@@ -10,6 +10,7 @@ using CowMouse.Buildings;
 using CowMouse.InGameObjects;
 using System.Threading;
 using CowMouse.Tasks;
+using CowMouse.InGameObjects.Resources;
 
 namespace CowMouse
 {
@@ -421,6 +422,37 @@ namespace CowMouse
                 }
             }
         }
+
+        /// <summary>
+        /// Calls the base draw, then does its extra text of interest.
+        /// </summary>
+        /// <param name="gameTime"></param>
+        public override void Draw(GameTime gameTime)
+        {
+            base.Draw(gameTime);
+
+            if (FollowMode)
+            {
+                String drawString = FollowTarget.InfoString;
+                Vector2 drawPosition = InfoStringPosition(Font.MeasureString(drawString));
+
+                spriteBatch.Begin();
+
+                spriteBatch.DrawString(Font, drawString, drawPosition, Color.White);
+
+                spriteBatch.End();
+            }
+        }
+
+        /// <summary>
+        /// Gives a position centered to the right of the follow target.
+        /// </summary>
+        /// <param name="stringMeasurements"></param>
+        /// <returns></returns>
+        private Vector2 InfoStringPosition(Vector2 stringMeasurements)
+        {
+            return new Vector2(Camera.ViewWidth / 2 + 100, Camera.ViewHeight / 2 - stringMeasurements.Y / 2);
+        }
         #endregion
 
         protected override CowMouseTileMap makeMap()
@@ -434,7 +466,7 @@ namespace CowMouse
             Clock.Update(gameTime);
 
             if (FollowMode)
-                Camera.CenterOnPoint(FollowTarget.xPositionDraw, FollowTarget.yPositionDraw);
+                Camera.CenterOnPoint(FollowTarget.xPositionDraw, FollowTarget.yPositionDraw - FollowTarget.VisualHeight / 2);
 
             foreach (Building building in buildings)
                 building.Update(gameTime);

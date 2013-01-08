@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using TileEngine;
 
-namespace CowMouse.InGameObjects
+namespace CowMouse.InGameObjects.Resources
 {
     public abstract class BasicResource : Carryable
     {
@@ -20,7 +20,7 @@ namespace CowMouse.InGameObjects
         protected InWorldObject carryingPerson = null;
         protected FullTask intendedCollector = null;
 
-        protected override InWorldObject CarryingPerson { get { return carryingPerson; } }
+        protected override InWorldObject Carryer { get { return carryingPerson; } }
 
         public override void GetPickedUp(InWorldObject picker)
         {
@@ -89,7 +89,7 @@ namespace CowMouse.InGameObjects
         #endregion
 
         #region Tags
-        public override bool IsResource
+        public override bool IsHaulableResource
         {
             get { return true; }
         }
@@ -161,8 +161,8 @@ namespace CowMouse.InGameObjects
         {
             if (IsBeingCarried)
             {
-                xPos = CarryingPerson.xPositionWorld + 1;
-                yPos = CarryingPerson.yPositionWorld + 1;
+                xPos = Carryer.xPositionWorld + 1;
+                yPos = Carryer.yPositionWorld + 1;
             }
         }
 

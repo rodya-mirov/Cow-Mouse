@@ -16,7 +16,7 @@ namespace CowMouse.InGameObjects
         /// <summary>
         /// Returns true if this object can currently be picked up.
         /// </summary>
-        public bool CanBePickedUp
+        public virtual bool CanBePickedUp
         {
             get
             {
@@ -47,7 +47,7 @@ namespace CowMouse.InGameObjects
         /// is current carrying this object.  Output is undefined
         /// when IsBeingCarried is set to false.
         /// </summary>
-        protected abstract InWorldObject CarryingPerson { get; }
+        protected abstract InWorldObject Carryer { get; }
 
         /// <summary>
         /// Get picked up.  Should assume CanBePickedUp is set to true,
@@ -117,7 +117,7 @@ namespace CowMouse.InGameObjects
         {
             get
             {
-                return IsResource && (currentState == CarryableState.LOOSE);
+                return IsHaulableResource && (currentState == CarryableState.LOOSE);
             }
         }
 
@@ -126,7 +126,7 @@ namespace CowMouse.InGameObjects
         /// Represents whether or not this is a resource that should be
         /// collected and moved to a stockpile.
         /// </summary>
-        public abstract bool IsResource { get; }
+        public abstract bool IsHaulableResource { get; }
 
         /// <summary>
         /// Whether or not this object represents a wood resource.

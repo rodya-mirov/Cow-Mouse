@@ -22,7 +22,7 @@ namespace CowMouse
     public class CowMouseGame : Microsoft.Xna.Framework.Game
     {
         //for debugging purposes: this sets the speed to go just as fast as it damn well can
-        private bool stupidHyperMode = false;
+        private bool stupidHyperMode = true;
 
         public GraphicsDeviceManager graphics { get; private set; }
         public SpriteBatch spriteBatch { get; private set; }
@@ -243,6 +243,7 @@ namespace CowMouse
             this.fpsCounter.Font = font;
             this.SideMenu.Font = font;
             this.ClockViewer.Font = font;
+            this.WorldManager.Font = font;
 
             this.IsMouseVisible = true;
         }

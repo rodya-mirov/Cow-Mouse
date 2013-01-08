@@ -20,6 +20,20 @@ namespace CowMouse.NPCs
         private static Random rng = new Random();
         private const int DEFAULT_SEARCH_DEPTH = 300;
 
+        public override string InfoString
+        {
+            get
+            {
+                String output = "Name: ";
+                output += "\nGender: ";
+                output += "\nAge: ";
+                output += "\n\nEnergy: ";
+                output += "\nTask: ";
+
+                return output;
+            }
+        }
+
         public NPC(int xCoordinate, int yCoordinate, bool usingWorldCoordinates, WorldManager manager)
             : base(xCoordinate, yCoordinate, usingWorldCoordinates, manager)
         {
@@ -206,7 +220,7 @@ namespace CowMouse.NPCs
 
             if (pathToTask == null)
             {
-                foreach(FullTask task in tasksToTry)
+                foreach (FullTask task in tasksToTry)
                     WorldManager.ReturnTaskUnfinished(task);
             }
             else

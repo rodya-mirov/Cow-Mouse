@@ -21,11 +21,16 @@ namespace CowMouse.NPCs
         protected int yPos { get; set; }
         protected CowMouseTileMap Map { get { return WorldManager.MyMap; } }
 
+        protected const int numTextures = 4;
         protected static Texture2D[] townsManTextures { get; set; }
+
         protected int textureIndex { get; set; }
 
         private const int xDrawOffset = 31; //the true center of this thing is about 31 pixels right of xPos
         private const int yDrawOffset = 49; //the true center of this thing is about 49 pixels down of yPos
+
+        public override int VisualHeight { get { return 44; } }
+        public override int VisualWidth { get { return 14; } }
 
         protected static Rectangle[] sources;
 
@@ -61,8 +66,10 @@ namespace CowMouse.NPCs
         }
         #endregion
 
+        public abstract String InfoString { get; }
+
         /// <summary>
-        /// 
+        /// Construct a new person using the specified parameters.
         /// </summary>
         /// <param name="game"></param>
         /// <param name="xCoordinate"></param>
@@ -83,14 +90,14 @@ namespace CowMouse.NPCs
                 this.yPos = yCoordinate;
             }
 
-            pickRandomTextureIndex();
+            pickTextureIndex();
         }
 
         #region Texture indices
         private static int nextTexture = 0;
-        private void pickRandomTextureIndex()
+        private void pickTextureIndex()
         {
-            nextTexture = (nextTexture + 1) % 3;
+            nextTexture = (nextTexture + 1) % (numTextures);
             this.textureIndex = nextTexture;
         }
         #endregion
@@ -323,10 +330,12 @@ namespace CowMouse.NPCs
         /// <param name="game"></param>
         public static void LoadContent(Game game)
         {
-            townsManTextures = new Texture2D[3];
+            townsManTextures = new Texture2D[numTextures];
+
             townsManTextures[0] = game.Content.Load<Texture2D>(@"Images\NPCs\TownsMan1");
             townsManTextures[1] = game.Content.Load<Texture2D>(@"Images\NPCs\TownsMan2");
             townsManTextures[2] = game.Content.Load<Texture2D>(@"Images\NPCs\TownsWoman1");
+            townsManTextures[3] = townsManTextures[2];
 
             sources = new Rectangle[4];
 
