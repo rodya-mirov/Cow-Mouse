@@ -17,6 +17,7 @@ namespace CowMouse.Tasks.TaskStepExtensions
         {
             this.markedBedroom = markedBedroom;
             this.markedPoint = markedPoint;
+            this.WhereToPlace = markedBedroom;
         }
 
         public override Point StartPoint

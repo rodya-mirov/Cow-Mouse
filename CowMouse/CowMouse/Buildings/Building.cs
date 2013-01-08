@@ -325,13 +325,13 @@ namespace CowMouse.Buildings
         /// <param name="bat"></param>
         protected void SetSquareState(int worldX, int worldY, BuildingInteractionType bit, BuildingAvailabilityType bat)
         {
-            int x = worldX - XMin;
-            int y = worldY - YMin;
+            int localX = worldX - XMin;
+            int localY = worldY - YMin;
 
-            modeCounts[Tuple.Create(squareActionModes[x, y], squareAvailabilityModes[x, y])] -= 1;
+            modeCounts[Tuple.Create(squareActionModes[localX, localY], squareAvailabilityModes[localX, localY])] -= 1;
 
-            squareAvailabilityModes[x, y] = bat;
-            squareActionModes[x, y] = bit;
+            squareAvailabilityModes[localX, localY] = bat;
+            squareActionModes[localX, localY] = bit;
 
             modeCounts[Tuple.Create(bit, bat)] += 1;
         }

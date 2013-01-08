@@ -158,25 +158,12 @@ namespace CowMouse.NPCs
 
         protected Bedroom currentBedroom;
 
-        /// <summary>
-        /// Bedroom might be null.
-        /// </summary>
-        /// <param name="bedroom"></param>
-        protected void GoToSleep(Bedroom bedroom)
-        {
-            currentBedroom = bedroom;
-
-            if (bedroom != null)
-                bedroom.UseByPerson(SquareCoordinate.X, SquareCoordinate.Y, this, currentMainTask);
-
-            IsSleeping = true;
-        }
-
         protected void WakeUp()
         {
             if (currentBedroom != null)
                 currentBedroom.StopUsingSquare(SquareCoordinate.X, SquareCoordinate.Y, this);
 
+            currentBedroom = null;
             IsSleeping = false;
         }
 
@@ -295,9 +282,16 @@ namespace CowMouse.NPCs
                     Bedroom goalBedroom = currentPartialTask.WhereToPlace as Bedroom;
 
                     if (goalBedroom != null)
+                    {
+                        currentBedroom = goalBedroom;
                         goalBedroom.UseByPerson(SquareCoordinate.X, SquareCoordinate.Y, this, currentMainTask);
+                    }
+                    else
+                    {
+                        throw new InvalidCastException("Must end the sleep step on a bedroom!");
+                    }
 
-                    GoToSleep(goalBedroom);
+                    IsSleeping = true;
                     break;
 
                 default:
