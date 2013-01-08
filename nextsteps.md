@@ -4,11 +4,6 @@ Next Steps for Operation Cow Mouse
 Roughly speaking, there are four (mostly disjoint) directions
 that all need to be gone down a significant way.
 
-Tile Engine
------------
-
-Obviously, I need to fix the damn jittering.  Ugh!
-
 Town Mode
 ---------
 

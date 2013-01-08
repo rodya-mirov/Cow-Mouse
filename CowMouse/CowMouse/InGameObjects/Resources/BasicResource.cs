@@ -6,6 +6,7 @@ using CowMouse.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using TileEngine;
+using CowMouse.Buildings;
 
 namespace CowMouse.InGameObjects.Resources
 {
@@ -18,6 +19,13 @@ namespace CowMouse.InGameObjects.Resources
 
         #region Carrying business
         protected InWorldObject carryingPerson = null;
+        protected Building currentStockpile = null;
+
+        public override bool IsInStockpile
+        {
+            get { return currentStockpile != null; }
+        }
+
         protected FullTask intendedCollector = null;
 
         protected override InWorldObject Carryer { get { return carryingPerson; } }
@@ -29,6 +37,17 @@ namespace CowMouse.InGameObjects.Resources
 
             this.currentState = CarryableState.CARRIED;
             carryingPerson = picker;
+
+            if (IsInStockpile)
+            {
+                Point coord = SquareCoordinate;
+                int x = coord.X;
+                int y = coord.Y;
+
+                currentStockpile.RemoveObject(x, y, this);
+
+                currentStockpile = null;
+            }
         }
 
         public override void Drop()
@@ -42,13 +61,14 @@ namespace CowMouse.InGameObjects.Resources
             currentState = CarryableState.LOOSE;
         }
 
-        public override void GetPutInStockpile()
+        public override void GetPutInStockpile(Building stockpile)
         {
             if (!IsBeingCarried)
                 throw new InvalidOperationException("Isn't being carried right now.");
 
             carryingPerson = null;
             intendedCollector = null;
+            currentStockpile = stockpile;
 
             this.currentState = CarryableState.IN_STOCKPILE;
         }

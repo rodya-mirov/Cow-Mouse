@@ -366,7 +366,7 @@ namespace CowMouse.Buildings
                     SetSquareState(worldX, worldY, BuildingInteractionType.STORAGE, BuildingAvailabilityType.IN_USE);
                     occupants[localX, localY] = worldObject;
 
-                    worldObject.GetPutInStockpile();
+                    worldObject.GetPutInStockpile(this);
 
                     break;
 
@@ -389,6 +389,24 @@ namespace CowMouse.Buildings
                 default:
                     throw new NotImplementedException("Unclear how to receive an object in state " + squareActionModes[localX, localY]);
             }
+        }
+
+        public void RemoveObject(int worldX, int worldY, InWorldObject car)
+        {
+            if (!this.ContainsSquare(worldX, worldY))
+                throw new ArgumentOutOfRangeException("This building does not contain the specified cell!");
+
+            int localX = worldX - XMin;
+            int localY = worldY - YMin;
+
+            if (squareActionModes[localX, localY] != BuildingInteractionType.STORAGE || squareAvailabilityModes[localX, localY] != BuildingAvailabilityType.IN_USE)
+                throw new InvalidOperationException("This square isn't being used for storage!");
+
+            if (occupants[localX, localY] != car)
+                throw new InvalidOperationException("That object isn't here!");
+
+            occupants[localX, localY] = null;
+            SetSquareState(worldX, worldY, BuildingInteractionType.STORAGE, BuildingAvailabilityType.AVAILABLE);
         }
 
         /// <summary>

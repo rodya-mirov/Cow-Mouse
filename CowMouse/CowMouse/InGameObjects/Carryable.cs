@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using TileEngine;
+using CowMouse.Buildings;
 
 namespace CowMouse.InGameObjects
 {
@@ -72,7 +73,7 @@ namespace CowMouse.InGameObjects
         /// state is Carried, and should end (barring weirdness)
         /// in current state being InStockpile.
         /// </summary>
-        public abstract void GetPutInStockpile();
+        public abstract void GetPutInStockpile(Building stockpile);
 
         /// <summary>
         /// Get used as material.  Assumes the current state is
@@ -141,7 +142,7 @@ namespace CowMouse.InGameObjects
         /// <summary>
         /// Indicates whether or not this is in a stockpile.
         /// </summary>
-        public bool IsInStockpile { get { return currentState == CarryableState.IN_STOCKPILE; } }
+        public abstract bool IsInStockpile { get; }
 
         protected CarryableState currentState;
         #endregion
